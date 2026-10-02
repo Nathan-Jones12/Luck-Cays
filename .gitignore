@@ -2,3 +2,40 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+.vscode/
+.idea/
+
+# dependencies
+node_modules/
+.npm/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# env + secrets
+.env
+.env.*
+!.env.example
+
+# local database (SQLite prototype)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+apps/api/prisma/dev.db*
+apps/api/prisma/schema.sqlite.prisma
+
+# logs + coverage
+*.log
+npm-debug.log*
+coverage/
+.nyc_output/
+
+# test artefacts
+playwright-report/
+test-results/
+
+# rtp simulator output
+tools/rtp-sim/out/

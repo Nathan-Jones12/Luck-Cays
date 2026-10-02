@@ -1,0 +1,600 @@
+// Luck-Cays data model. Canonical target is MySQL 8 (InnoDB, utf8mb4) per the PRD.
+//
+// The prototype also runs on SQLite so it needs no Docker. `prisma/sqlite.mjs`
+// derives a SQLite variant from THIS file by swapping the datasource provider and
+// stripping the MySQL-only native type attributes. Edit only this file; the SQLite
+// schema is generated and gitignored.
+//
+// Two conventions follow from having to describe both:
+//
+//  * No `enum` blocks. Prisma does not support enums on SQLite, so status, type and
+//    role columns are `String`, constrained by the zod schemas in
+//    `packages/shared/src/schemas` and validated at every boundary.
+//  * Native type attributes are limited to `@db.Text`, which the SQLite generator
+//    knows how to strip.
+//
+// MONEY: every chip column is BigInt and carries whole chips. Never Float, never
+// Decimal, never Int - a chip balance can exceed a 32-bit integer, and floats lose
+// precision silently. Odds are stored as integers scaled by 100 (250 means 2.50) so
+// the payout calculation is exact integer arithmetic.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity and auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id       String @id @default(cuid())
+  email    String @unique
+  username String @unique
+
+  passwordHash String @map("password_hash")
+
+  /// "player" | "support" | "admin"
+  role String @default("player")
+
+  /// "active" | "banned" | "self_excluded"
+  status String @default("active")
+
+  emailVerifiedAt DateTime? @map("email_verified_at")
+
+  /// TOTP secret, AES-256-GCM encrypted at the field level. Never logged, never
+  /// returned by the API. Null until the user enrols in 2FA.
+  totpSecretEnc String? @map("totp_secret_enc") @db.Text
+  totpEnabled   Boolean @default(false) @map("totp_enabled")
+
+  /// Set at signup when the player affirms they are 18 or over.
+  adultConfirmedAt DateTime? @map("adult_confirmed_at")
+
+  /// Failed login tracking, for lockout with backoff.
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  wallet        Wallet?
+  vipProgress   VipProgress?
+  refreshTokens RefreshToken[]
+  authTokens    AuthToken[]
+  backupCodes   BackupCode[]
+  bonusClaims   BonusClaim[]
+  slotRounds    SlotRound[]
+  freeSpins     SlotFreeSpinSession[]
+  sportsBets    SportsBet[]
+  pokerSeats    PokerSeat[]
+  pokerActions  PokerAction[]
+  auditEntries  AuditLog[]            @relation("AuditActor")
+
+  @@index([status])
+  @@map("users")
+}
+
+/// Refresh tokens rotate on every use. All tokens from one login share a
+/// `familyId`; presenting an already-rotated token revokes the whole family,
+/// which is how token theft is detected.
+model RefreshToken {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  /// SHA-256 of the token. The token itself is never stored.
+  tokenHash String @unique @map("token_hash")
+  familyId  String @map("family_id")
+
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+/// Single-use, time-limited tokens for email verification and password resets.
+model AuthToken {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  /// "verify_email" | "password_reset"
+  kind String
+
+  /// SHA-256 of the token sent to the user.
+  tokenHash String @unique @map("token_hash")
+
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@map("auth_tokens")
+}
+
+/// 2FA backup codes, Argon2id hashed and single use.
+model BackupCode {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  codeHash String    @map("code_hash")
+  usedAt   DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("backup_codes")
+}
+
+// ---------------------------------------------------------------------------
+// Wallet and ledger - the only place balances change
+// ---------------------------------------------------------------------------
+
+model Wallet {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  /// Whole chips. Only `wallet.service.ts` writes this, always inside a
+  /// transaction that locks this row.
+  balance BigInt @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries LedgerEntry[]
+
+  @@map("wallets")
+}
+
+/// Append-only. A row is never updated or deleted; a mistake is corrected by
+/// writing a compensating entry. `balanceAfter` makes every row independently
+/// auditable, and the sum of `amount` for a wallet must equal its balance.
+model LedgerEntry {
+  id       String @id @default(cuid())
+  walletId String @map("wallet_id")
+
+  /// Signed: positive credits, negative debits.
+  amount BigInt
+
+  /// "bet" | "win" | "bonus" | "vip_reward" | "refund" | "adjustment"
+  /// | "poker_buyin" | "poker_cashout"
+  type String
+
+  /// What caused this entry, e.g. ("slot_round", <id>) or ("sports_bet", <id>).
+  refType String? @map("ref_type")
+  refId   String? @map("ref_id")
+
+  /// Unique per logical money movement. Replaying a key returns the original
+  /// result instead of moving chips twice. Null only for entries the system
+  /// generates where no client retry is possible.
+  idempotencyKey String? @unique @map("idempotency_key")
+
+  balanceAfter BigInt @map("balance_after")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
+  @@index([type])
+  @@index([refType, refId])
+  @@map("ledger_entries")
+}
+
+/// One row per bonus granted, so "has this been claimed" is a query not a flag.
+model BonusClaim {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  /// "signup" | "daily" | "levelup" | "cashback"
+  bonusType String @map("bonus_type")
+
+  amount    BigInt
+  claimedAt DateTime @default(now()) @map("claimed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, bonusType, claimedAt])
+  @@map("bonus_claims")
+}
+
+/// Tunable amounts the PRD wants out of code: bonus sizes, VIP points rate and so
+/// on. Values are strings and parsed by `config.service.ts`.
+model ConfigValue {
+  key         String  @id
+  value       String  @db.Text
+  description String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("config_values")
+}
+
+// ---------------------------------------------------------------------------
+// Slots
+// ---------------------------------------------------------------------------
+
+model SlotGame {
+  id   String @id @default(cuid())
+  slug String @unique
+  name String
+
+  /// A full SlotConfig, validated against `slotConfigSchema` on read and on write.
+  /// Editable by an admin, which is why the engine never hardcodes a game.
+  configJson String @map("config_json") @db.Text
+
+  /// Stored scaled by 10000: 9600 means 96.00%.
+  rtpTargetBp Int @map("rtp_target_bp")
+
+  /// Must stay false until the RTP simulator has signed the game off.
+  isActive Boolean @default(false) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rounds           SlotRound[]
+  freeSpinSessions SlotFreeSpinSession[]
+
+  @@map("slot_games")
+}
+
+model SlotRound {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  gameId String @map("game_id")
+
+  /// Zero for a free spin - nothing was debited.
+  bet BigInt
+  win BigInt
+
+  /// The reel stops the server chose, plus the graded wins, as JSON. This is the
+  /// record of what the player was shown.
+  stopsJson String @map("stops_json") @db.Text
+
+  /// Set when this round is a free spin, pointing at the round that awarded it.
+  freeSpinParentId String? @map("free_spin_parent_id")
+
+  /// The client's key for this spin. Replaying it returns this round rather than
+  /// spinning again. It lives here and not only on the ledger entry because a free
+  /// spin debits nothing, so there is no ledger row to key it on.
+  idempotencyKey String? @unique @map("idempotency_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game SlotGame @relation(fields: [gameId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([gameId])
+  @@index([freeSpinParentId])
+  @@map("slot_rounds")
+}
+
+/// Free spins owed to a player. Held server-side so the client cannot grant itself
+/// spins or change the bet they are played at.
+model SlotFreeSpinSession {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  gameId String @map("game_id")
+
+  /// The bet the triggering spin was played at. Free spins are locked to it.
+  bet BigInt
+
+  remaining  Int
+  multiplier Int
+
+  /// The round that awarded these spins.
+  triggerRoundId String? @map("trigger_round_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game SlotGame @relation(fields: [gameId], references: [id])
+
+  @@index([userId, gameId])
+  @@map("slot_free_spin_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// VIP
+// ---------------------------------------------------------------------------
+
+model VipTier {
+  id   Int    @id
+  name String @unique
+
+  minPoints Int @map("min_points")
+
+  /// Daily bonus multiplier scaled by 100: 150 means 1.5x.
+  dailyMultiplierBp Int @map("daily_multiplier_bp")
+
+  levelupBonus BigInt @map("levelup_bonus")
+
+  /// Weekly cashback on net losses, whole percent.
+  cashbackPct Int @map("cashback_pct")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  progress VipProgress[]
+
+  @@map("vip_tiers")
+}
+
+model VipProgress {
+  userId String @id @map("user_id")
+
+  lifetimePoints BigInt @default(0) @map("lifetime_points")
+  tierId         Int    @map("tier_id")
+
+  /// Net chip losses in the current cashback week. Clamped at zero - a winning
+  /// week earns no cashback but does not carry a negative forward.
+  weekNetLoss   BigInt   @default(0) @map("week_net_loss")
+  weekStartedAt DateTime @default(now()) @map("week_started_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier VipTier @relation(fields: [tierId], references: [id])
+
+  @@index([tierId])
+  @@map("vip_progress")
+}
+
+// ---------------------------------------------------------------------------
+// Sports betting
+// ---------------------------------------------------------------------------
+
+model SportsEvent {
+  id String @id @default(cuid())
+
+  /// Id from the upstream data API, so a sync is idempotent.
+  providerId String @unique @map("provider_id")
+
+  sport  String
+  league String
+  home   String
+  away   String
+
+  startsAt DateTime @map("starts_at")
+
+  /// "scheduled" | "live" | "final" | "cancelled"
+  status String @default("scheduled")
+
+  /// `{ "homeScore": n, "awayScore": n }` once known.
+  resultJson String? @map("result_json") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  markets SportsMarket[]
+
+  @@index([sport, league, startsAt])
+  @@index([status, startsAt])
+  @@map("sports_events")
+}
+
+model SportsMarket {
+  id      String @id @default(cuid())
+  eventId String @map("event_id")
+
+  /// "moneyline" | "spread" | "totals"
+  type String
+
+  /// Handicap or total, e.g. "-3.5" or "47.5". Empty string for moneyline, which has no
+  /// line. A string so no float ever touches a line that decides a bet, and NOT nullable:
+  /// it is part of a compound unique index, and SQL treats NULLs as distinct, so a nullable
+  /// column there would let duplicate moneyline markets accumulate on every sync.
+  line String @default("")
+
+  /// `[{ key, label, oddsInt }]` - oddsInt is decimal odds scaled by 100.
+  selectionsJson String @map("selections_json") @db.Text
+
+  /// "open" | "suspended" | "settled" | "void"
+  status String @default("open")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  event SportsEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bets  SportsBet[]
+
+  @@unique([eventId, type, line])
+  @@index([status])
+  @@map("sports_markets")
+}
+
+model SportsBet {
+  id       String @id @default(cuid())
+  userId   String @map("user_id")
+  marketId String @map("market_id")
+
+  /// The selection `key` from the market's selections.
+  selection String
+
+  /// Decimal odds scaled by 100, locked at placement. 250 means 2.50.
+  oddsInt Int @map("odds_int")
+
+  stake        BigInt
+  /// stake * oddsInt / 100, computed once with integer arithmetic.
+  potentialWin BigInt @map("potential_win")
+
+  /// "open" | "won" | "lost" | "push" | "void"
+  status String @default("open")
+
+  settledAt DateTime? @map("settled_at")
+
+  /// Shared with the wallet debit, so a retried placement cannot double-stake.
+  idempotencyKey String @unique @map("idempotency_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  market SportsMarket @relation(fields: [marketId], references: [id])
+
+  @@index([userId, status, createdAt])
+  @@index([marketId, status])
+  @@map("sports_bets")
+}
+
+// ---------------------------------------------------------------------------
+// Poker
+// ---------------------------------------------------------------------------
+
+model PokerTable {
+  id   String @id @default(cuid())
+  name String
+
+  maxSeats   Int    @map("max_seats")
+  smallBlind BigInt @map("small_blind")
+  bigBlind   BigInt @map("big_blind")
+  minBuyin   BigInt @map("min_buyin")
+  maxBuyin   BigInt @map("max_buyin")
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  seats PokerSeat[]
+  hands PokerHand[]
+
+  @@map("poker_tables")
+}
+
+/// Chips sitting at a table. These have already left the wallet via a
+/// `poker_buyin` ledger entry, and return to it on cash-out. The sum of all seat
+/// stacks plus wallet balances is the invariant that proves no chips were created.
+model PokerSeat {
+  id      String @id @default(cuid())
+  tableId String @map("table_id")
+  seatNo  Int    @map("seat_no")
+
+  userId String? @map("user_id")
+  stack  BigInt  @default(0)
+
+  sittingOut Boolean @default(false) @map("sitting_out")
+
+  /// Set when a seated player's socket drops; they are given a grace period
+  /// before being folded and removed.
+  disconnectedAt DateTime? @map("disconnected_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  table PokerTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  user  User?      @relation(fields: [userId], references: [id])
+
+  @@unique([tableId, seatNo])
+  @@index([userId])
+  @@map("poker_seats")
+}
+
+model PokerHand {
+  id      String @id @default(cuid())
+  tableId String @map("table_id")
+
+  /// Space-separated board, e.g. "As Kd 7c 2h Td".
+  boardCards String @default("") @map("board_cards")
+
+  pot BigInt @default(0)
+
+  /// `[{ seatNo, userId, amount, handName }]`
+  winnersJson String? @map("winners_json") @db.Text
+
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  table   PokerTable    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  actions PokerAction[]
+
+  @@index([tableId, startedAt])
+  @@map("poker_hands")
+}
+
+/// Every action, in order, so any hand can be replayed exactly.
+model PokerAction {
+  id     String @id @default(cuid())
+  handId String @map("hand_id")
+  userId String @map("user_id")
+
+  /// "preflop" | "flop" | "turn" | "river" | "showdown"
+  street String
+
+  /// "fold" | "check" | "call" | "bet" | "raise" | "allin" | "post_blind"
+  action String
+
+  amount BigInt @default(0)
+
+  /// Monotonic within a hand.
+  seq Int
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hand PokerHand @relation(fields: [handId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id])
+
+  @@unique([handId, seq])
+  @@index([userId])
+  @@map("poker_actions")
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+/// Every admin action and every security-relevant event. Append-only.
+model AuditLog {
+  id String @id @default(cuid())
+
+  /// Null for unauthenticated events such as a failed login.
+  actorId String? @map("actor_id")
+
+  action String
+
+  targetType String? @map("target_type")
+  targetId   String? @map("target_id")
+
+  detailsJson String? @map("details_json") @db.Text
+  ip          String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_log")
+}

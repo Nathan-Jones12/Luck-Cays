@@ -1,0 +1,45 @@
+{
+  "name": "luck-cays",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Luck-Cays - play-money casino platform (prototype)",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "tools/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "npm install && npm run db:push && npm run db:seed",
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @luck-cays/api",
+    "dev:web": "npm run dev --workspace @luck-cays/web",
+    "build": "npm run build --workspace @luck-cays/web",
+    "db:push": "npm run db:push --workspace @luck-cays/api",
+    "db:seed": "npm run db:seed --workspace @luck-cays/api",
+    "db:studio": "npm run db:studio --workspace @luck-cays/api",
+    "rtp": "npm run start --workspace @luck-cays/rtp-sim --",
+    "slots:generate": "npm run generate --workspace @luck-cays/slot-gen",
+    "slots:tune": "npm run tune --workspace @luck-cays/slot-gen --",
+    "test": "npm run test --workspace @luck-cays/shared && npm run test --workspace @luck-cays/slot-gen && npm run test --workspace @luck-cays/api",
+    "typecheck": "npm run typecheck --workspace @luck-cays/shared && npm run typecheck --workspace @luck-cays/api && npm run typecheck --workspace @luck-cays/web && npm run typecheck --workspace @luck-cays/rtp-sim && npm run typecheck --workspace @luck-cays/slot-gen",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.18.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vue-eslint-parser": "^9.4.3"
+  }
+}

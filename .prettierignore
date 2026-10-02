@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.db
+*.db-journal
+
+# Prisma has its own formatter: `npx prisma format`. Prettier cannot parse the schema
+# language without a plugin, and the two would disagree about it anyway.
+*.prisma
+
+# Generated files - edit the source and regenerate instead.
+packages/shared/src/slots/configs/
+docs/rtp/
+package-lock.json

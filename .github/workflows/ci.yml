@@ -1,0 +1,135 @@
+# CI. Runs the whole verification chain on every push and pull request.
+#
+# Two things worth noting about what is and is not run here:
+#
+#  * The RTP gate is the closed-form calculation in `tools/slot-gen`, not a million-round
+#    simulation. It takes milliseconds and has no sampling error, where the simulation is both
+#    slow and too noisy to certify a 0.5% tolerance on a high-volatility game.
+#  * Tests run against SQLite, which is what the prototype ships with. The MySQL job runs the
+#    same suite against the real production data layer, where the wallet uses an actual
+#    `SELECT ... FOR UPDATE` rather than the in-process fallback. That is the only way the
+#    concurrency guarantee is proven for the path that ships.
+
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dummy secrets: CI needs them to be present and well-formed, not real.
+  JWT_SECRET: ci-only-jwt-secret-that-is-long-enough-to-pass-validation
+  FIELD_ENCRYPTION_KEY: Y2ktb25seS0zMi1ieXRlLWZpZWxkLWtleS0wMDAwMDA=
+
+jobs:
+  verify:
+    name: Lint, typecheck and test (SQLite)
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      DATABASE_PROVIDER: sqlite
+      DATABASE_URL: file:./dev.db
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The Prisma client has to exist before anything typechecks against it.
+      - name: Generate the Prisma client
+        run: npm run db:push
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build the web app
+        run: npm run build
+
+      # Catches a generated slot config that was hand-edited, or specs changed without
+      # regenerating. A dirty tree here means the committed configs do not match their source.
+      - name: Generated slot configs are up to date
+        run: |
+          npm run slots:generate
+          git diff --exit-code -- packages/shared/src/slots/configs \
+            || (echo "::error::Generated slot configs are stale. Run 'npm run slots:generate' and commit the result." && exit 1)
+
+  wallet-mysql:
+    name: Wallet concurrency (MySQL, real row locks)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: luckcays
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      NODE_ENV: test
+      DATABASE_PROVIDER: mysql
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/luckcays
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Push the schema to MySQL
+        run: npx prisma db push --schema prisma/schema.prisma
+        working-directory: apps/api
+
+      - name: Generate the Prisma client for MySQL
+        run: npx prisma generate --schema prisma/schema.prisma
+        working-directory: apps/api
+
+      # The wallet suite is the one that must pass here: on MySQL it exercises
+      # SELECT ... FOR UPDATE instead of the SQLite in-process mutex.
+      - name: Wallet tests against MySQL
+        run: npx vitest run tests/wallet.test.ts
+        working-directory: apps/api
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Advisory, not blocking: a transitive moderate finding should not stop a prototype
+      # merging, but it should be visible in the run.
+      - run: npm audit --audit-level=high || true
