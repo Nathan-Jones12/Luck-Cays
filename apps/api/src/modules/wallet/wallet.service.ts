@@ -19,7 +19,7 @@
 import type { LedgerType } from "@luck-cays/shared";
 import { conflict, idempotencyConflict, insufficientFunds, notFound } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
-import { lockWallet, prisma, type Tx } from "../../lib/prisma.js";
+import { lockWalletBalance, prisma, walletTransaction, type Tx } from "../../lib/prisma.js";
 import { usesSqlite } from "../../lib/env.js";
 
 export interface MovementInput {
@@ -49,9 +49,11 @@ export interface MovementResult {
 /* -------------------------------------------------------------------------- */
 
 /**
- * LOCKING: on MySQL, `lockWallet` issues `SELECT ... FOR UPDATE` and the database
- * serialises concurrent debits on the same wallet. That holds across any number of
- * API instances and is the production path.
+ * LOCKING: on MySQL, `lockWalletBalance` issues `SELECT balance ... FOR UPDATE` and the
+ * database serialises concurrent debits on the same wallet. That holds across any number
+ * of API instances and is the production path. Crucially the balance comes back from that
+ * locking read - a plain re-read would return the transaction's snapshot instead, which is
+ * a lost update waiting to happen. See the note on `lockWalletBalance`.
  *
  * SQLite has no `FOR UPDATE`. File-level write locking is not sufficient on its own,
  * because two debits can both *read* the same balance before either writes, and both
@@ -212,7 +214,10 @@ async function applyMovement(
   });
   if (!wallet) throw notFound("Wallet not found", "WALLET_NOT_FOUND");
 
-  await lockWallet(tx, wallet.id);
+  // Take the lock AND the balance in one statement. On MySQL a plain re-read here would
+  // return the transaction's snapshot rather than the locked row - see the long note on
+  // `lockWalletBalance`. This is the value every later decision is made on.
+  const lockedBalance = await lockWalletBalance(tx, wallet.id);
 
   if (input.idempotencyKey) {
     const replay = await findReplay(tx, input.idempotencyKey, {
@@ -225,13 +230,9 @@ async function applyMovement(
     }
   }
 
-  // Re-read inside the lock: on MySQL the row may have changed between the
-  // findUnique above and the lock being granted.
-  const locked = await tx.wallet.findUnique({
-    where: { id: wallet.id },
-    select: { balance: true },
-  });
-  const current = locked?.balance ?? wallet.balance;
+  // On SQLite there is no locking read, so fall back to the value already fetched. The
+  // in-process mutex is what makes that safe there.
+  const current = lockedBalance ?? wallet.balance;
 
   const next = current + input.signedAmount;
   if (next < 0n) throw insufficientFunds(-input.signedAmount, current);
@@ -258,7 +259,7 @@ async function applyMovement(
 export async function debit(input: MovementInput): Promise<MovementResult> {
   assertPositive(input.amount);
   return serialisePerWallet(input.userId, () =>
-    prisma.$transaction((tx) => applyMovement(tx, { ...input, signedAmount: -input.amount })),
+    walletTransaction((tx) => applyMovement(tx, { ...input, signedAmount: -input.amount })),
   );
 }
 
@@ -266,7 +267,7 @@ export async function debit(input: MovementInput): Promise<MovementResult> {
 export async function credit(input: MovementInput): Promise<MovementResult> {
   assertPositive(input.amount);
   return serialisePerWallet(input.userId, () =>
-    prisma.$transaction((tx) => applyMovement(tx, { ...input, signedAmount: input.amount })),
+    walletTransaction((tx) => applyMovement(tx, { ...input, signedAmount: input.amount })),
   );
 }
 
@@ -292,7 +293,7 @@ export async function transact<T>(
   work: (context: TransactContext) => Promise<T>,
 ): Promise<T> {
   return serialisePerWallet(userId, () =>
-    prisma.$transaction(async (tx) => {
+    walletTransaction(async (tx) => {
       const context: TransactContext = {
         tx,
         debit: (input) => {

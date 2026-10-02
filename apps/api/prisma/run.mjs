@@ -19,14 +19,24 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-// Prisma looks for .env beside the schema or in the cwd; ours lives at the repo
-// root, so load it explicitly before the CLI needs DATABASE_URL.
+// Prisma looks for .env beside the schema or in the cwd; ours lives at the repo root, so
+// load it explicitly before the CLI needs DATABASE_URL.
+//
+// A missing .env is not an error: CI sets these variables in the environment directly, and
+// so does any real deployment. Only a missing DATABASE_URL after both sources is fatal.
+// Values already in the environment win, so an explicit override is not clobbered by the file.
 const rootEnv = resolve(here, "../../../.env");
 if (existsSync(rootEnv)) {
+  const fromEnvironment = { ...process.env };
   process.loadEnvFile(rootEnv);
-} else {
+  Object.assign(process.env, fromEnvironment);
+}
+
+if (!process.env.DATABASE_URL) {
   console.error(
-    `no .env at ${rootEnv}\nCopy .env.example to .env at the repo root and set DATABASE_URL.`,
+    "DATABASE_URL is not set, and there is no .env at the repo root to read it from.\n" +
+      "For local work: copy .env.example to .env and fill it in.\n" +
+      "In CI or a deployment: set DATABASE_URL in the environment.",
   );
   process.exit(1);
 }
