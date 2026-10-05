@@ -1,0 +1,502 @@
+LUCK-CAYS
+Online Casino — Security-First Shell / Framework Build Specification
+Agent-ready engineering brief • September 2026
+Goal: build the production-quality website shell/framework for Luck-Cays before connecting real-money gambling, payment processing, or live casino operations. The framework must be modular so approved regulated services can be connected later without rebuilding the core application.
+CRITICAL: Do not enable real-money deposits, wagers, withdrawals, or prizes until the operators have confirmed the applicable gambling licenses, jurisdictions, age/KYC/AML requirements, payment-provider approvals, responsible-gaming requirements, and technical obligations with qualified legal/compliance professionals.
+1. Core Principles
+•	Security is the first engineering requirement, not a later feature.
+•	Authentication and identity are centralized.
+•	The wallet is a financial ledger, not a simple balance number.
+•	Payments use provider adapters and tokenization; never store raw card data.
+•	Games are server-authoritative when real money is eventually introduced.
+•	Sensitive actions are auditable.
+•	Jurisdiction and eligibility restrictions are enforced centrally.
+•	The site is responsive, accessible, modular, and testable.
+•	Development uses fake/test money only.
+2. Payment / Regulatory Reality
+Do not assume ordinary card processors or PayPal can simply be connected to an online casino. Provider policies and jurisdictional rules can prohibit or restrict gambling. Stripe's current restricted-business documentation lists internet gambling/casino activity among prohibited businesses, while PayPal states that approved gambling merchants may use PayPal in certain jurisdictions subject to approval and restrictions. The Gaming Board for The Bahamas publishes AML/CFT/CPF materials. Therefore, Luck-Cays must use an approved provider for its actual business model and jurisdictions.
+Architecture rule: build a PaymentProvider interface and a fake/sandbox provider now. Do not hard-code Stripe, PayPal, or any other provider as though approval is guaranteed.
+3. Recommended Architecture
+•	Frontend: React + TypeScript + Vite/Next.js, or preserve the team's existing framework.
+•	Backend: Node.js + TypeScript with a structured API framework.
+•	Database: PostgreSQL or MySQL with migrations, foreign keys, transactions, and least-privilege users.
+•	Cache/rate limiting: Redis or equivalent managed service.
+•	Authentication: managed identity provider or carefully implemented server-side authentication.
+•	Private object storage for documents if legally required; short-lived signed URLs.
+•	Production secrets stored in a secrets manager/vault.
+•	Structured logging, metrics, error tracking, uptime monitoring, and security alerts.
+•	CI/CD with tests, linting, dependency scanning, and secret scanning.
+4. Security — Highest Priority
+•	Passwords: Argon2id or another modern adaptive password hash; never plaintext or reversible passwords.
+•	Sessions: secure HttpOnly/SameSite cookies, session rotation after login and privilege changes, session/device management.
+•	MFA: authenticator-app TOTP and/or WebAuthn/passkeys; require step-up authentication for sensitive actions.
+•	CSRF: SameSite protections plus CSRF defenses for state-changing browser requests.
+•	XSS: framework escaping, validation, safe output encoding, strict CSP, and no unsafe HTML injection.
+•	SQL injection: parameterized queries/ORM only.
+•	Rate limiting: login, signup, reset, MFA, deposits, withdrawals, promo redemption, support abuse, and admin endpoints.
+•	Security headers: HSTS, CSP, frame-ancestors, Referrer-Policy, Permissions-Policy, MIME sniffing protection.
+•	Secrets: never commit .env files, API keys, DB passwords, JWT secrets, encryption keys, or provider credentials.
+•	Encryption: TLS everywhere; encrypt sensitive data at rest where appropriate; separate keys from ciphertext.
+•	Audit logs: security, account, payment, wallet, compliance, and admin events with timestamp, actor, result, and correlation ID.
+•	Admin: separate admin auth, mandatory MFA, least privilege, short sessions, and complete audit trails.
+•	Dependencies: lock versions, scan vulnerabilities, remove unused packages, patch critical issues.
+•	Backups: encrypted backups plus tested restores and a documented retention policy.
+5. Preventing Duplicate / Multi-Account Abuse
+Email and phone uniqueness are useful, but they should NOT be the entire anti-multi-account system. Use several identity and risk signals. Some are hard uniqueness constraints; others should trigger review rather than automatically banning legitimate people.
+•	Email: normalize, verify, and enforce a unique database constraint.
+•	Phone: normalize to E.164, verify, and enforce uniqueness where appropriate.
+•	KYC identity: after required identity verification, keep a protected unique identity reference/key. Do not expose raw government-ID numbers in normal tables.
+•	Age verification: verify rather than merely trusting a typed birth date when required.
+•	Payment instruments: use provider tokens/references or permitted provider fingerprints; never store raw PAN/CVV.
+•	Account-linking service: connect accounts to verified identifiers, payment references, devices, sessions, and other permitted signals.
+•	Risk signals: device/session reputation, IP/ASN, geolocation, velocity, repeated failed attempts, and behavioral anomalies.
+•	Do not permanently block solely because two people share an IP/device; households, schools, workplaces, and public networks can share them.
+•	Withdrawal destination checks can identify suspicious reuse where lawful and appropriate.
+•	Suspicious relationships should enter a controlled manual-review queue with evidence and reason codes.
+6. Card / PayPal Payment Architecture
+Use hosted payment fields or provider tokenization from an approved provider. Luck-Cays should receive a provider token/reference rather than raw card data. Never store card numbers or CVV/CVC.
+•	PaymentProvider.createDepositIntent()
+•	PaymentProvider.confirmDeposit()
+•	PaymentProvider.getTransactionStatus()
+•	PaymentProvider.createWithdrawalRequest()
+•	PaymentProvider.verifyWebhook()
+•	Use signed webhook verification.
+•	Make webhook processing idempotent and resistant to replay.
+•	Store provider transaction IDs and statuses, not unnecessary payment credentials.
+•	Reconcile external provider records against the internal ledger.
+•	Development provider = fake/sandbox implementation only.
+7. Wallet / Money Ledger
+Never implement money as `users.balance = users.balance + amount`.
+•	wallets: wallet metadata/currency.
+•	ledger_transactions: immutable financial transaction header.
+•	ledger_entries: debit/credit entries.
+•	payment_transactions: external provider references/statuses.
+•	withdrawal_requests: withdrawal workflow/status.
+•	Separate cash and promotional/bonus balances.
+•	Every financial operation uses a database transaction.
+•	Use idempotency keys so retries cannot duplicate deposits.
+•	The server is authoritative; never trust a frontend balance.
+•	Use integer minor units or exact decimal arithmetic, never floating-point money calculations.
+•	Do not delete financial ledger records; correct mistakes with compensating transactions.
+8. Global Site Shell
+•	Home
+•	Casino / Games
+•	Live Casino (future module)
+•	Sports (only if actually licensed/offered; hide behind a feature flag otherwise)
+•	Promotions
+•	Tournaments
+•	Jackpots
+•	VIP
+•	Help / Support
+•	Responsible Gaming
+•	Login / Sign Up
+•	Wallet / Balance
+•	Profile
+Global UI:
+•	Persistent header with Luck-Cays logo, navigation, account state, balance, and Deposit button.
+•	Mobile navigation.
+•	Global search where useful.
+•	Footer with Terms, Privacy, Responsible Gaming, AML/KYC, licensing information, support, and jurisdiction information.
+•	Age/legal notice where required.
+•	Maintenance/status banner controlled by feature flag.
+•	Notification center.
+•	Accessible keyboard navigation, visible focus, semantic HTML, strong contrast, and reduced-motion support.
+9. Pages to Build
+•	Home / landing page
+•	Game lobby
+•	Game detail / launch page
+•	Login
+•	Sign up
+•	Email verification
+•	Phone verification
+•	Forgot/reset password
+•	MFA setup/verification
+•	Account dashboard
+•	Profile
+•	Security Center
+•	Sessions / trusted devices
+•	Wallet
+•	Deposit
+•	Withdrawal
+•	Transaction history
+•	Promotions
+•	Bonus details
+•	VIP dashboard
+•	Responsible Gaming
+•	Self-exclusion / cooling-off
+•	Support center / FAQ
+•	Contact support
+•	Terms / Privacy / Cookie Policy
+•	AML/KYC information
+•	Jurisdiction / availability
+•	Maintenance
+•	404 / error pages
+10. Authentication Flow
+1. User submits required registration data.
+2. Normalize email/phone before uniqueness checks.
+3. Apply rate limits and bot/abuse protection.
+4. Create a pending/unverified account.
+5. Send verification challenges.
+6. Verify email/phone.
+7. Run age/KYC eligibility workflow before real-money activity where required.
+8. Create a secure session.
+9. Display account status and required verification steps.
+10. Require step-up authentication for sensitive actions.
+11. Account Status Model
+•	PENDING_VERIFICATION
+•	ACTIVE
+•	KYC_REQUIRED
+•	KYC_REVIEW
+•	PAYMENT_RESTRICTED
+•	WITHDRAWAL_RESTRICTED
+•	SELF_EXCLUDED
+•	SUSPENDED
+•	CLOSED
+Centralize eligibility/authorization checks. Do not scatter status rules across individual pages.
+12. Game System
+Build games as modules/plugins so the shell is independent of individual games.
+•	Game catalog: ID, name, provider, category, thumbnail, status, limits, supported jurisdictions.
+•	Game launch service: verifies eligibility and creates a secure session/launch token.
+•	Game session service.
+•	Bet/wager service with authorization, balance checks, limits, and idempotency.
+•	Authoritative result service.
+•	Game history visible to the player.
+•	Server-side responsible-gaming limits.
+•	For real-money games, use an approved/auditable randomness architecture.
+•	Initial development = demo games/fake currency only.
+13. Responsible-Gaming Features
+•	Deposit limits
+•	Loss/session/wager limits where applicable
+•	Time/session reminders
+•	Cooling-off
+•	Self-exclusion
+•	Account closure workflow
+•	Reality/check-in notifications where required
+•	Easy access to responsible-gaming information
+•	Support contact
+14. KYC / AML / Compliance Framework
+•	KYC provider adapter.
+•	Identity verification status/reason codes.
+•	Document verification status without unnecessary raw-document storage.
+•	Age verification status.
+•	Sanctions/PEP screening integration point where legally required.
+•	Transaction monitoring integration point.
+•	Suspicious-activity/manual-review queue.
+•	Source-of-funds/source-of-wealth workflow where required.
+•	Jurisdiction/geolocation eligibility service.
+•	Compliance audit log.
+15. Admin Dashboard
+•	Overview: users, deposits, withdrawals, active sessions, alerts, system health.
+•	User search/profile review.
+•	KYC/compliance review queue.
+•	Payment/reconciliation queue.
+•	Withdrawal review queue.
+•	Responsible-gaming controls.
+•	Account suspension/closure tools.
+•	Game catalog management.
+•	Promotions/bonuses.
+•	Content/CMS controls.
+•	Feature flags.
+•	Jurisdiction configuration.
+•	Security event viewer.
+•	Audit log viewer.
+•	Role/permission management.
+16. Admin Roles
+•	SUPER_ADMIN — emergency/full administrative access with strong controls.
+•	SECURITY_ADMIN — security events, sessions, authentication controls.
+•	COMPLIANCE_ADMIN — KYC/AML/review workflows.
+•	PAYMENTS_ADMIN — payment/reconciliation workflows.
+•	SUPPORT_AGENT — customer support with limited sensitive-data access.
+•	CONTENT_ADMIN — games/promotions/content.
+•	AUDITOR — read-only audit access.
+17. Audit Events
+•	Registration attempts/results
+•	Login success/failure
+•	Password changes/resets
+•	MFA enrollment/removal/challenges
+•	Email/phone changes
+•	KYC status changes
+•	Account status changes
+•	Deposits and payment status changes
+•	Withdrawals
+•	Wallet/ledger transaction IDs
+•	Promotion/bonus changes
+•	Responsible-gaming limit changes
+•	Admin login/actions
+•	Permission changes
+•	Configuration/feature-flag changes
+•	Security alerts
+18. Database Rules
+•	Use UUIDs/non-sequential public IDs.
+•	Unique indexes for normalized verified email and phone.
+•	Foreign keys and database constraints.
+•	created_at/updated_at and relevant status timestamps.
+•	Never hard-delete financial ledger records.
+•	Separate PII from game/operational data where practical.
+•	Collect the minimum data required for the service and compliance obligations.
+19. API Structure
+•	/api/auth/*
+•	/api/users/*
+•	/api/security/*
+•	/api/kyc/*
+•	/api/wallet/*
+•	/api/payments/*
+•	/api/withdrawals/*
+•	/api/games/*
+•	/api/game-sessions/*
+•	/api/bets/*
+•	/api/promotions/*
+•	/api/responsible-gaming/*
+•	/api/support/*
+•	/api/admin/*
+•	/api/health/*
+20. API Security Rules
+•	Validate every request server-side.
+•	Consistent safe error format; no stack traces/internal secrets to clients.
+•	Object-level authorization on every resource.
+•	Never trust client-supplied balance, role, KYC status, or account ID.
+•	Idempotency keys for financial operations.
+•	Request correlation IDs.
+•	Rate limits by IP/account/operation.
+•	Cryptographically verify payment webhooks and reject replays.
+•	Never expose provider secrets to the browser.
+21. UI/UX Ideas to Make Luck-Cays Feel Complete
+•	Premium Caribbean-inspired visual identity without clutter.
+•	Game-card hover animations with reduced-motion support.
+•	Smooth page transitions.
+•	Game search, categories, filters, favorites, and recently played.
+•	Featured-games section.
+•	Promotions carousel.
+•	Jackpot component.
+•	VIP progress/dashboard.
+•	Transaction timeline.
+•	Security Center showing verification, MFA, and active sessions.
+•	Balance refresh animation only after confirmed server transaction.
+•	Skeleton loaders and useful empty states.
+•	Notification/toast system.
+•	Responsive mobile bottom navigation.
+•	Strong accessibility.
+•	Clear security/trust section on the home page.
+22. Security Testing Checklist
+•	Unit tests for authentication and authorization.
+•	Integration tests for email/phone uniqueness.
+•	Duplicate webhook/payment tests.
+•	Wallet race-condition/concurrency tests.
+•	IDOR/BOLA authorization tests.
+•	XSS tests.
+•	SQL injection tests.
+•	CSRF tests.
+•	Rate-limit tests.
+•	Session invalidation tests.
+•	MFA recovery tests.
+•	Password-reset abuse tests.
+•	Admin privilege-escalation tests.
+•	Webhook replay/tampering tests.
+•	Dependency vulnerability scan.
+•	Secret scan.
+•	Production-build security checks.
+•	Independent penetration/security review before real-money launch.
+23. Suggested Project Structure
+luck-cays/
+├── apps/
+│   ├── web/
+│   ├── api/
+│   └── admin/
+├── packages/
+│   ├── ui/
+│   ├── types/
+│   ├── validation/
+│   ├── auth/
+│   ├── payments/
+│   ├── wallet/
+│   ├── compliance/
+│   ├── game-engine/
+│   └── config/
+├── database/
+│   ├── migrations/
+│   ├── seeds/
+│   └── schema/
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── security/
+│   └── e2e/
+├── docs/
+├── .env.example
+└── README.md
+24. Feature Flags
+•	ENABLE_REAL_MONEY
+•	ENABLE_DEPOSITS
+•	ENABLE_WITHDRAWALS
+•	ENABLE_LIVE_CASINO
+•	ENABLE_SPORTS
+•	ENABLE_PROMOTIONS
+•	ENABLE_VIP
+•	ENABLE_KYC
+•	ENABLE_GEOLOCATION
+•	ENABLE_MAINTENANCE_MODE
+All real-money flags must default OFF in development. A feature flag is not a security boundary; backend authorization and deployment configuration must also prevent unauthorized activation.
+25. Build Phases
+Phase 0 — Repository inspection: Inspect existing files, framework, database, routes, auth, environment, and components. Preserve working functionality.
+Phase 1 — Foundation: Create layouts, routing, design system, API client, validation, errors, configuration, logging, and CI checks.
+Phase 2 — Security foundation: Implement secure sessions/auth, password hashing, MFA framework, rate limiting, headers, CSRF, validation, audit logs, and secret handling.
+Phase 3 — Identity: Registration/login, verification, reset, MFA, security center, sessions, account states, and anti-duplicate architecture.
+Phase 4 — Wallet: Fake-money ledger, transaction history, idempotency, reconciliation architecture, and payment-provider interfaces.
+Phase 5 — Casino shell: Game lobby, cards, categories, search, favorites, recent games, launch shell, promotions, VIP, jackpots.
+Phase 6 — Compliance shell: KYC status, responsible gaming, self-exclusion/cooling-off, jurisdiction controls, review states.
+Phase 7 — Admin: RBAC, users, security events, configuration, feature flags, content, games, reconciliation, audit.
+Phase 8 — Testing: Unit, integration, E2E, security, race-condition, authorization, webhook, and responsive tests.
+Phase 9 — Production hardening: Threat model, secret audit, dependency audit, monitoring, backups/restore test, penetration test, incident-response plan, legal/compliance review.
+26. Agent Rules — Do Not Violate
+•	Do not enable real-money deposits, withdrawals, wagers, or prizes in development.
+•	Do not store raw card numbers or CVV/CVC.
+•	Do not invent payment-provider APIs or assume provider approval.
+•	Do not implement client-side-only authorization.
+•	Do not trust frontend balances, roles, KYC status, or account IDs.
+•	Do not delete ledger/audit records to correct mistakes; use compensating records.
+•	Do not expose admin endpoints without server-side authorization.
+•	Do not use email/phone alone as the anti-multi-account system.
+•	Do not permanently ban solely because accounts share an IP/device.
+•	Do not collect unnecessary personal information.
+•	Do not commit secrets.
+•	Do not remove existing working features without explicit instruction.
+•	Inspect the existing codebase before major changes.
+27. Definition of Done
+•	Complete responsive Luck-Cays shell.
+•	Functional test-data registration/login/reset/verification.
+•	Security Center and MFA framework.
+•	Duplicate email/phone protections.
+•	Identity/risk-linking architecture.
+•	Fake-money immutable wallet ledger.
+•	Game lobby and demo launch flow.
+•	Admin dashboard with RBAC/audit logs.
+•	Responsible-gaming/compliance pages.
+•	Clean payment/KYC/game provider adapters.
+•	Automated tests passing.
+•	No secrets committed.
+•	No real-money transaction possible in development.
+•	README with setup, environment variables, architecture, testing, and deployment.
+28. First Deliverable From the Agent
+1. Repository audit.
+2. Architecture diagram.
+3. Database ERD.
+4. Route map.
+5. Security threat model.
+6. Implementation checklist.
+7. Files to create/change.
+8. Then implement Phase 1 incrementally.
+29. Agent Prompt — Copy/Paste
+You are the senior software architect and implementation agent for Luck-Cays, an online casino project.
+
+Build the WEBSITE SHELL/FRAMEWORK FIRST. Do not activate real-money gambling, deposits, withdrawals, or real-money prizes.
+
+PRIORITY:
+1. Security
+2. Authentication/identity
+3. Wallet/ledger architecture
+4. Compliance/responsible-gaming architecture
+5. Casino shell/UI
+6. Admin tools
+7. Approved integrations later
+
+FIRST: inspect the entire existing repository. Do not blindly rewrite files. Report framework, routes, database, authentication, environment variables, reusable components, and current problems. Then create an implementation plan.
+
+SECURITY:
+- Argon2id password hashing.
+- Secure HttpOnly/SameSite sessions.
+- MFA/passkeys architecture.
+- Rate limiting.
+- CSRF protection.
+- CSP/security headers.
+- Strict server-side validation.
+- Parameterized DB access.
+- Server-side authorization for every protected resource.
+- Audit logs.
+- Secure secret management.
+- Dependency/secret scanning.
+- No raw card numbers/CVV.
+- No payment secrets in frontend.
+- No client-side-only authorization.
+- Never trust client balance/role/KYC status.
+
+ANTI-MULTI-ACCOUNT:
+Use verified normalized email + unique constraint; verified normalized phone + unique constraint; KYC identity reference when required; payment-provider token/reference/fingerprint where available; risk signals; account-linking/risk graph; and manual review. Do not permanently block solely because users share an IP/device.
+
+WALLET:
+Use a proper ledger, not a balance field. Use transaction headers, debit/credit entries, payment references, withdrawal workflow, DB transactions, precise money arithmetic, and idempotency. Development uses fake money.
+
+PAYMENTS:
+Create a PaymentProvider abstraction and fake/sandbox implementation. Do not assume Stripe, PayPal, or any generic processor supports Luck-Cays. Never store raw card/CVV data. Verify signed webhooks and prevent replay/duplicate processing.
+
+BUILD:
+- responsive global layout
+- premium Caribbean-inspired Luck-Cays design
+- home
+- game lobby
+- search/filter/favorites/recently played
+- login/signup
+- verification
+- password reset
+- MFA
+- account dashboard
+- security center
+- sessions/devices
+- wallet
+- deposit/withdrawal shells
+- transaction history
+- promotions
+- VIP
+- jackpots
+- support/FAQ
+- responsible gaming
+- self-exclusion/cooling-off
+- terms/privacy/AML/KYC/jurisdiction pages
+- admin dashboard
+- RBAC
+- audit log
+- feature flags
+- maintenance mode
+- error/404 pages
+
+GAME ARCHITECTURE:
+Games are modules. Build game catalog, launch/session, wager/result, history, and limits interfaces. Use demo games/fake currency only. Real-money RNG/game logic requires separate approved/auditable implementation.
+
+COMPLIANCE:
+Create KYC/AML/jurisdiction/status interfaces without inventing legal requirements. Support account states such as PENDING_VERIFICATION, ACTIVE, KYC_REQUIRED, KYC_REVIEW, PAYMENT_RESTRICTED, WITHDRAWAL_RESTRICTED, SELF_EXCLUDED, SUSPENDED, CLOSED.
+
+FEATURE FLAGS:
+ENABLE_REAL_MONEY
+ENABLE_DEPOSITS
+ENABLE_WITHDRAWALS
+ENABLE_LIVE_CASINO
+ENABLE_SPORTS
+ENABLE_KYC
+ENABLE_GEOLOCATION
+ENABLE_MAINTENANCE_MODE
+
+All real-money flags default OFF in development.
+
+DO NOT:
+- store raw card/CVV data
+- commit secrets
+- expose admin secrets
+- hard-code provider credentials
+- delete financial ledger records
+- trust frontend financial values
+- use device/IP alone as a permanent identity block
+- bypass compliance
+- enable real-money functionality in development
+- remove existing working features without explicit instruction
+
+BEFORE MAJOR IMPLEMENTATION, OUTPUT:
+1. repository audit
+2. architecture diagram
+3. database ERD
+4. route map
+5. threat model
+6. implementation checklist
+7. files to create/change
+
+Then implement Phase 1 and proceed incrementally.
+30. Reference Notes
+Current provider-policy references checked while preparing this document include Stripe's current Prohibited and Restricted Businesses documentation, PayPal's gambling acceptable-use guidance, and Gaming Board for The Bahamas AML/CFT/CPF publications. These are reference points rather than legal advice. The actual Luck-Cays operating model must be reviewed for licensing, age, KYC/AML, payment, tax, responsible-gaming, geolocation, and other applicable requirements.

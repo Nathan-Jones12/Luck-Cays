@@ -2,3 +2,21 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+**/.env.local
+**/.env.*.local
+*.pem
+*.key
+**/.admin-mfa-*.txt
+**/.admin-mfa-*.png
+
+# Dependencies and generated build output
+**/node_modules/
+**/.next/
+**/coverage/
+**/*.tsbuildinfo
+npm-debug.log*
