@@ -7,7 +7,7 @@
  * unmeasured RTP.
  */
 import { randomInt } from "node:crypto";
-import { buildGrid, evaluate, pickStops, type RandomInt, type SlotConfig } from "@luck-cays/shared";
+import { evaluate, spinGrid, type RandomInt, type SlotConfig } from "@luck-cays/shared";
 
 export type RngMode = "crypto" | "fast";
 
@@ -102,7 +102,11 @@ export function simulate(config: SlotConfig, options: SimOptions): SimResult {
   const started = Date.now();
 
   for (let i = 0; i < rounds; i++) {
-    const base = evaluate(config, buildGrid(config, pickStops(config, rng)), { totalBet: bet });
+    const paid = spinGrid(config, rng);
+    const base = evaluate(config, paid.grid, {
+      totalBet: bet,
+      coinValues: paid.coinValues,
+    });
 
     let roundWin = base.totalWin;
     baseReturned += base.totalWin;
@@ -115,9 +119,11 @@ export function simulate(config: SlotConfig, options: SimOptions): SimResult {
       freeSpins--;
       freeSpinsPlayed++;
 
-      const free = evaluate(config, buildGrid(config, pickStops(config, rng)), {
+      const bonus = spinGrid(config, rng);
+      const free = evaluate(config, bonus.grid, {
         totalBet: bet,
         winMultiplier: multiplier,
+        coinValues: bonus.coinValues,
       });
 
       roundWin += free.totalWin;

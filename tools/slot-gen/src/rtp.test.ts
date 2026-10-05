@@ -56,7 +56,7 @@ describe("return to player", () => {
     });
   }
 
-  it("keeps the three games meaningfully different from each other", () => {
+  it("keeps every game meaningfully different from the others", () => {
     // Otherwise there is no reason for a player to pick one over another.
     const rtps = themes.map((theme) => exactRtp(toSlotConfig(theme)).rtp);
     expect(new Set(rtps.map((rtp) => rtp.toFixed(4))).size).toBe(themes.length);
@@ -65,28 +65,44 @@ describe("return to player", () => {
 
 describe("the generated configs match the specs", () => {
   for (const theme of themes) {
-    it(`${theme.slug} builds reel strips with the documented composition`, () => {
+    const stripGame = theme.counts !== undefined;
+
+    it(`${theme.slug} declares exactly one reel model`, () => {
       const config = toSlotConfig(theme);
-      const expectedLength = Object.values(theme.counts).reduce((a, b) => a + b, 0);
-
-      for (const strip of config.reelStrips) {
-        expect(strip).toHaveLength(expectedLength);
-
-        const counts = new Map<string, number>();
-        for (const symbol of strip) counts.set(symbol, (counts.get(symbol) ?? 0) + 1);
-
-        for (const [symbol, want] of Object.entries(theme.counts)) {
-          expect(counts.get(symbol), `${theme.slug} ${symbol}`).toBe(want);
-        }
-      }
+      const hasStrips = config.reelStrips !== undefined;
+      const hasWeights = config.reelWeights !== undefined;
+      expect(hasStrips !== hasWeights, `${theme.slug} must have strips XOR weights`).toBe(true);
     });
 
-    it(`${theme.slug} never shows two scatters on one reel`, () => {
-      // The exact scatter maths is general enough to handle it, but the game design assumes one
-      // scatter per reel at most - two would change the trigger rate the tuner solved against.
+    // The next two only make sense for a strip game. A weighted game has no strips to check,
+    // and it can legitimately show several scatters on one reel - every cell is an independent
+    // draw, which is the model, not a flaw.
+    it.skipIf(!stripGame)(
+      `${theme.slug} builds reel strips with the documented composition`,
+      () => {
+        const config = toSlotConfig(theme);
+        const counts = theme.counts ?? {};
+        const expectedLength = Object.values(counts).reduce((a, b) => a + b, 0);
+
+        for (const strip of config.reelStrips ?? []) {
+          expect(strip).toHaveLength(expectedLength);
+
+          const seen = new Map<string, number>();
+          for (const symbol of strip) seen.set(symbol, (seen.get(symbol) ?? 0) + 1);
+
+          for (const [symbol, want] of Object.entries(counts)) {
+            expect(seen.get(symbol), `${theme.slug} ${symbol}`).toBe(want);
+          }
+        }
+      },
+    );
+
+    it.skipIf(!stripGame)(`${theme.slug} never shows two scatters on one reel`, () => {
+      // For a strip game the design assumes at most one scatter per reel - two would change the
+      // trigger rate the tuner solved against.
       const config = toSlotConfig(theme);
 
-      for (const strip of config.reelStrips) {
+      for (const strip of config.reelStrips ?? []) {
         for (let stop = 0; stop < strip.length; stop++) {
           let inWindow = 0;
           for (let row = 0; row < config.rows; row++) {

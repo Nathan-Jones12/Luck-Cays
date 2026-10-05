@@ -59,13 +59,17 @@ export function buildStrip(counts: Record<string, number>, offset: number): stri
 }
 
 export function buildStrips(spec: ThemeSpec): string[][] {
-  const strips = spec.offsets.map((offset) => buildStrip(spec.counts, offset));
+  if (!spec.counts || !spec.offsets) {
+    throw new Error(`${spec.slug} is a weighted game and has no reel strips`);
+  }
+  const counts = spec.counts;
+  const strips = spec.offsets.map((offset) => buildStrip(counts, offset));
 
   // The documented composition must actually hold on every reel.
   for (const [reel, strip] of strips.entries()) {
     const got = new Map<string, number>();
     for (const symbol of strip) got.set(symbol, (got.get(symbol) ?? 0) + 1);
-    for (const [symbol, want] of Object.entries(spec.counts)) {
+    for (const [symbol, want] of Object.entries(counts)) {
       const actual = got.get(symbol) ?? 0;
       if (actual !== want) {
         throw new Error(`${spec.slug} reel ${reel}: ${symbol} appears ${actual}x, want ${want}`);
@@ -84,7 +88,8 @@ export function toSlotConfig(spec: ThemeSpec): SlotConfig {
     reels: 5,
     rows: 3,
     symbols: spec.symbols,
-    reelStrips: buildStrips(spec),
+    // Whichever reel model the spec declares. The schema refuses both or neither.
+    ...(spec.reelWeights ? { reelWeights: spec.reelWeights } : { reelStrips: buildStrips(spec) }),
     paylines: PAYLINES_20,
     paytable: spec.paytable,
     wild: { symbol: spec.wild, substitutes: true },
@@ -95,6 +100,7 @@ export function toSlotConfig(spec: ThemeSpec): SlotConfig {
       freeSpinMultiplier: spec.freeSpinMultiplier,
       retrigger: spec.retrigger,
     },
+    ...(spec.coin ? { coin: spec.coin } : {}),
     rtpTarget: spec.rtpTarget,
     betLevels: spec.betLevels,
   });
@@ -128,87 +134,130 @@ function payMap(pays: Record<string, number>): string {
     .join(", ");
 }
 
-/** Emit the generated TypeScript module for one theme. */
-export function emitSource(spec: ThemeSpec): string {
-  const strips = buildStrips(spec);
-  const stripLength = strips[0]?.length ?? 0;
-
-  const symbolsSource = spec.symbols
-    .map((s) => `    { id: ${q(s.id)}, name: ${q(s.name)}, kind: ${q(s.kind)} },`)
+function weightsSource(weights: Array<Record<string, number>>): string {
+  return weights
+    .map(
+      (table) =>
+        "    { " +
+        Object.entries(table)
+          .map(([symbol, weight]) => `${symbol}: ${weight}`)
+          .join(", ") +
+        " },",
+    )
     .join("\n");
+}
 
-  const paytableSource = Object.entries(spec.paytable)
-    .map(([symbol, pays]) => `    ${symbol}: { ${payMap(pays)} },`)
-    .join("\n");
-
-  const linesSource = PAYLINES_20.map((line, i) => `    [${line.join(", ")}], // ${i + 1}`).join(
-    "\n",
-  );
-
-  const composition = Object.entries(spec.counts)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([symbol, n]) => `${symbol} ${n}`)
-    .join("  ");
-
-  return `import type { SlotConfig } from "../types.js";
+function coinSource(coin: NonNullable<ThemeSpec["coin"]>): string {
+  return [
+    "  coin: {",
+    `    symbol: ${q(coin.symbol)},`,
+    "    // Each coin draws its own value, as a multiple of the TOTAL bet.",
+    "    values: [",
+    ...coin.values.map((entry) => `      { value: ${entry.value}, weight: ${entry.weight} },`),
+    "    ],",
+    "    // Coins are decoration below this many - the feature is all or nothing.",
+    `    needed: ${coin.needed},`,
+    "  },",
+  ].join("\n");
+}
 
 /**
- * ${spec.name} - ${spec.blurb}
+ * Emit the generated TypeScript module for one theme.
  *
- * GENERATED FILE - do not edit. Source of truth is \`tools/slot-gen/src/specs.ts\`;
- * regenerate with \`npm run generate --workspace @luck-cays/slot-gen\`. The reel
- * strips below are derived from the symbol counts, so hand-editing them makes the
- * composition documented here untrue.
- *
- * Composition per ${stripLength}-symbol strip:
- *   ${composition}
- *
- * Measured RTP lives in \`docs/rtp/${spec.slug}.md\`. Regenerate it with
- * \`npm run rtp -- --game ${spec.slug} --spins 1000000 --write-docs\` after ANY
- * change here, and do not set this game \`is_active\` until the measured figure is
- * within 0.5% of \`rtpTarget\`.
+ * Built by joining lines rather than one large template literal. The output is itself
+ * TypeScript containing braces and quotes, and nesting that inside a template is how the
+ * generator becomes unreadable and fragile.
  */
-export const ${spec.varName}: SlotConfig = {
-  slug: ${q(spec.slug)},
-  name: ${q(spec.name)},
-  theme: ${q(spec.theme)},
+export function emitSource(spec: ThemeSpec): string {
+  const weighted = spec.reelWeights !== undefined;
+  const strips = weighted ? [] : buildStrips(spec);
+  const stripLength = strips[0]?.length ?? 0;
 
-  reels: 5,
-  rows: 3,
+  const composition = weighted
+    ? (spec.reelWeights ?? [])
+        .map(
+          (table, reel) =>
+            ` *   reel ${reel + 1}: ` +
+            Object.entries(table)
+              .filter(([, weight]) => weight > 0)
+              .map(([symbol, weight]) => `${symbol} ${weight}`)
+              .join("  "),
+        )
+        .join("\n")
+    : " *   " +
+      Object.entries(spec.counts ?? {})
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([symbol, n]) => `${symbol} ${n}`)
+        .join("  ");
 
-  symbols: [
-${symbolsSource}
-  ],
+  const reelBlock = weighted
+    ? [
+        "  // Weighted reels: every visible cell is drawn independently from its reel's table,",
+        "  // so rows are uncorrelated and a symbol can appear more than once on one reel.",
+        "  reelWeights: [",
+        weightsSource(spec.reelWeights ?? []),
+        "  ],",
+      ]
+    : ["  reelStrips: [", stripSource(strips), "  ],"];
 
-  reelStrips: [
-${stripSource(strips)}
-  ],
-
-  // 20 fixed lines. Row 0 is the top of the window, row 2 the bottom.
-  paylines: [
-${linesSource}
-  ],
-
-  // Multipliers of the LINE bet (total bet / 20), paid left to right.
-  paytable: {
-${paytableSource}
-  },
-
-  wild: { symbol: ${q(spec.wild)}, substitutes: true },
-
-  scatter: {
-    symbol: ${q(spec.scatter)},
-    // Multipliers of the TOTAL bet - scatters pay from anywhere on the grid.
-    pays: { ${payMap(spec.scatterPays)} },
-    freeSpins: { ${payMap(spec.freeSpins)} },
-    freeSpinMultiplier: ${spec.freeSpinMultiplier},
-    retrigger: ${spec.retrigger},
-  },
-
-  rtpTarget: ${spec.rtpTarget},
-
-  // Every level divides by 20 lines, so a line bet is always whole chips.
-  betLevels: [${spec.betLevels.join(", ")}],
-};
-`;
+  return [
+    'import type { SlotConfig } from "../types.js";',
+    "",
+    "/**",
+    ` * ${spec.name} - ${spec.blurb}`,
+    " *",
+    " * GENERATED FILE - do not edit. Source of truth is `tools/slot-gen/src/specs.ts`;",
+    " * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel data below is",
+    " * derived from the spec, so hand-editing it makes the composition documented here untrue.",
+    " *",
+    weighted ? " * Per-reel weights:" : ` * Composition per ${stripLength}-symbol strip:`,
+    composition,
+    " *",
+    ` * Measured RTP lives in \`docs/rtp/${spec.slug}.md\`. Regenerate it with`,
+    ` * \`npm run rtp -- --game ${spec.slug} --spins 1000000 --write-docs\` after ANY change here,`,
+    " * and do not set this game `is_active` until the exact figure is within 0.5% of `rtpTarget`.",
+    " */",
+    `export const ${spec.varName}: SlotConfig = {`,
+    `  slug: ${q(spec.slug)},`,
+    `  name: ${q(spec.name)},`,
+    `  theme: ${q(spec.theme)},`,
+    "",
+    "  reels: 5,",
+    "  rows: 3,",
+    "",
+    "  symbols: [",
+    ...spec.symbols.map((s) => `    { id: ${q(s.id)}, name: ${q(s.name)}, kind: ${q(s.kind)} },`),
+    "  ],",
+    "",
+    ...reelBlock,
+    "",
+    "  // 20 fixed lines. Row 0 is the top of the window, row 2 the bottom.",
+    "  paylines: [",
+    ...PAYLINES_20.map((line, i) => `    [${line.join(", ")}], // ${i + 1}`),
+    "  ],",
+    "",
+    "  // Multipliers of the LINE bet (total bet / 20), paid left to right.",
+    "  paytable: {",
+    ...Object.entries(spec.paytable).map(([symbol, pays]) => `    ${symbol}: { ${payMap(pays)} },`),
+    "  },",
+    "",
+    `  wild: { symbol: ${q(spec.wild)}, substitutes: true },`,
+    "",
+    "  scatter: {",
+    `    symbol: ${q(spec.scatter)},`,
+    "    // Multipliers of the TOTAL bet - scatters pay from anywhere on the grid.",
+    `    pays: { ${payMap(spec.scatterPays)} },`,
+    `    freeSpins: { ${payMap(spec.freeSpins)} },`,
+    `    freeSpinMultiplier: ${spec.freeSpinMultiplier},`,
+    `    retrigger: ${spec.retrigger},`,
+    "  },",
+    "",
+    ...(spec.coin ? [coinSource(spec.coin), ""] : []),
+    `  rtpTarget: ${spec.rtpTarget},`,
+    "",
+    "  // Every level divides by 20 lines, so a line bet is always whole chips.",
+    `  betLevels: [${spec.betLevels.join(", ")}],`,
+    "};",
+    "",
+  ].join("\n");
 }

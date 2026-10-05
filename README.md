@@ -51,16 +51,16 @@ add the secret to an authenticator app. A fresh one is generated every time you 
 
 ## What is actually built
 
-| Feature               | State                                                                                                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Wallet and ledger** | Complete. Append-only ledger, idempotency, row-locked debits, 16 tests including a concurrency oversell test.                                                          |
-| **Auth**              | Signup, login, JWT access tokens, refresh rotation with reuse detection, TOTP 2FA, backup codes, lockout with backoff, password reset, roles.                          |
-| **Slots**             | Complete. Three games, server-side outcomes, free spins, PixiJS reels, autoplay with stop conditions, paytable, history. RTP calculated in closed form and signed off. |
-| **VIP**               | Complete. Points on every wager, five tiers, level-up bonuses, daily-bonus multiplier, weekly cashback.                                                                |
-| **Sports betting**    | Complete for the v1 scope. Moneyline, spreads, totals, pre-match. Odds locked at placement, automatic settlement, bet slip.                                            |
-| **Poker**             | Playable. Full Hold'em state machine, side pots, action timers, reconnect grace, buy-in and cash-out through the wallet, live table UI.                                |
-| **Admin**             | Player lookup, chip adjustments, bans, game activation, manual results, job triggers, audit log.                                                                       |
-| **Embedding**         | Slots mount in an iframe on any of our front-ends, via a one-shot launch ticket and a game-scoped session. See [docs/embedding.md](docs/embedding.md).                 |
+| Feature               | State                                                                                                                                                                                                                                                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Wallet and ledger** | Complete. Append-only ledger, idempotency, row-locked debits, 16 tests including a concurrency oversell test.                                                                                                                                                     |
+| **Auth**              | Signup, login, JWT access tokens, refresh rotation with reuse detection, TOTP 2FA, backup codes, lockout with backoff, password reset, roles.                                                                                                                     |
+| **Slots**             | Complete. Four games (three built here, one ported from an external HTML build), server-side outcomes, free spins, two reel models, a coin feature, PixiJS reels, autoplay with stop conditions, paytable, history. RTP calculated in closed form and signed off. |
+| **VIP**               | Complete. Points on every wager, five tiers, level-up bonuses, daily-bonus multiplier, weekly cashback.                                                                                                                                                           |
+| **Sports betting**    | Complete for the v1 scope. Moneyline, spreads, totals, pre-match. Odds locked at placement, automatic settlement, bet slip.                                                                                                                                       |
+| **Poker**             | Playable. Full Hold'em state machine, side pots, action timers, reconnect grace, buy-in and cash-out through the wallet, live table UI.                                                                                                                           |
+| **Admin**             | Player lookup, chip adjustments, bans, game activation, manual results, job triggers, audit log.                                                                                                                                                                  |
+| **Embedding**         | Slots mount in an iframe on any of our front-ends, via a one-shot launch ticket and a game-scoped session. See [docs/embedding.md](docs/embedding.md).                                                                                                            |
 
 ### Known gaps
 
@@ -152,11 +152,12 @@ still exists and still matters — it corroborates the exact model against the l
 measures hit frequency and volatility, which genuinely cannot be computed in closed form
 because paylines share cells.
 
-| Game            | Target | Exact RTP | Volatility       | Bonus       |
-| --------------- | ------ | --------- | ---------------- | ----------- |
-| Reef Riches     | 96.0%  | 95.99%    | Medium (SD 4.1x) | 1 in 37, ×2 |
-| Kraken's Depths | 95.5%  | 95.48%    | High (SD 5.4x)   | 1 in 52, ×3 |
-| Sunken Temple   | 96.5%  | 96.45%    | Low (SD 3.4x)    | 1 in 35, ×2 |
+| Game             | Target | Exact RTP | Volatility       | Bonus        |
+| ---------------- | ------ | --------- | ---------------- | ------------ |
+| Reef Riches      | 96.0%  | 95.99%    | Medium (SD 4.1x) | 1 in 37, ×2  |
+| Kraken's Depths  | 95.5%  | 95.48%    | High (SD 5.4x)   | 1 in 52, ×3  |
+| Sunken Temple    | 96.5%  | 96.45%    | Low (SD 3.4x)    | 1 in 35, ×2  |
+| 242 Wild Harbour | 95.56% | 95.56%    | Medium (SD 3.1x) | 1 in 166, ×2 |
 
 Full reports in [`docs/rtp/`](docs/rtp/). To change a game:
 
@@ -177,7 +178,7 @@ A game must not be set `is_active` until its exact RTP is within 0.5% of target.
 ```bash
 npm run dev            # API + web together
 npm run verify         # format, lint, typecheck, test - what CI runs
-npm run test           # 119 tests across shared, slot-gen and api
+npm run test           # 147 tests across shared, slot-gen and api
 npm run typecheck      # all five workspaces
 npm run db:studio      # browse the database
 npm run rtp -- --all   # simulate every game

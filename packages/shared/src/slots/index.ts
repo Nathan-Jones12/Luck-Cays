@@ -2,6 +2,7 @@ import { slotConfigSchema, type SlotConfig } from "./types.js";
 import { reefRiches } from "./configs/reef-riches.js";
 import { krakensDepths } from "./configs/krakens-depths.js";
 import { sunkenTemple } from "./configs/sunken-temple.js";
+import { wildHarbour } from "./configs/wild-harbour.js";
 
 export * from "./types.js";
 export * from "./engine.js";
@@ -12,7 +13,7 @@ export * from "./exact.js";
  * at runtime the API reads the config from the database so admins can edit a
  * game without a deploy. This registry is the source the seed starts from.
  */
-const registry: SlotConfig[] = [reefRiches, krakensDepths, sunkenTemple];
+const registry: SlotConfig[] = [reefRiches, krakensDepths, sunkenTemple, wildHarbour];
 
 /**
  * Parse every config at module load. A malformed game config is a startup

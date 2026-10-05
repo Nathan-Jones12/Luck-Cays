@@ -30,10 +30,26 @@ export interface ThemeSpec {
   scatter: string;
   symbols: Array<{ id: string; name: string; kind: SymbolKind }>;
 
-  /** Symbol counts per reel strip. The sum is the strip length. */
-  counts: Record<string, number>;
+  /**
+   * Symbol counts per reel strip. The sum is the strip length.
+   * Present for a strip game; omitted for a weighted one.
+   */
+  counts?: Record<string, number>;
   /** Starting phase per reel, so the five strips are not rotations of each other. */
-  offsets: number[];
+  offsets?: number[];
+
+  /**
+   * Per-reel symbol weights, for a weighted game. Every visible cell is drawn independently.
+   * Supply this OR `counts`, never both.
+   */
+  reelWeights?: Array<Record<string, number>>;
+
+  /** The coin feature, for games that have one. */
+  coin?: {
+    symbol: string;
+    values: Array<{ value: number; weight: number }>;
+    needed: number;
+  };
 
   /**
    * The low-value symbols. They are the most frequent payers, so the tuner trims
@@ -204,6 +220,100 @@ export const themes: ThemeSpec[] = [
     betLevels: BET_LEVELS,
   },
 ];
+
+/**
+ * 242 Wild Harbour. Ported from a self-contained HTML build we own the rights to.
+ *
+ * Two things make this unlike the other three, and both come straight from the original rather
+ * than being choices made here:
+ *
+ *  - WEIGHTED REELS. Every visible cell is drawn independently from a per-reel weight table,
+ *    not from a strip with a single stop. No wild on reel 1 (`W: 0`), which is the usual way to
+ *    stop five-wild lines being too common.
+ *  - A COIN FEATURE. Coins carry their own weighted value, and pay nothing at all unless five
+ *    or more land. Below the threshold they are decoration.
+ *
+ * The line pays, weights, coin table, scatter pays and free-spin counts below are the
+ * original's numbers exactly. `rtpTarget` is the measured figure, not an aspiration - see the
+ * note where it is set.
+ */
+const wildHarbour: ThemeSpec = {
+  varName: "wildHarbour",
+  slug: "wild-harbour",
+  name: "242 Wild Harbour",
+  theme: "harbour",
+  blurb: "weighted reels and a coin-collect feature. Ported from the original HTML build.",
+
+  wild: "W",
+  scatter: "S",
+
+  symbols: [
+    { id: "W", name: "242 Wild", kind: "wild" },
+    { id: "S", name: "Scatter", kind: "scatter" },
+    { id: "G", name: "242 Coin", kind: "normal" },
+    { id: "M", name: "Blue marlin", kind: "normal" },
+    { id: "C", name: "Conch", kind: "normal" },
+    { id: "F", name: "Flamingo", kind: "normal" },
+    { id: "P", name: "Golden palm", kind: "normal" },
+    { id: "H", name: "Hibiscus", kind: "normal" },
+  ],
+
+  // Reel 1 carries no wild, exactly as the original.
+  reelWeights: [
+    { H: 28, P: 26, F: 20, C: 16, M: 10, W: 0, S: 3, G: 9 },
+    { H: 28, P: 26, F: 20, C: 16, M: 10, W: 7, S: 3, G: 9 },
+    { H: 28, P: 26, F: 20, C: 16, M: 10, W: 7, S: 3, G: 9 },
+    { H: 28, P: 26, F: 20, C: 16, M: 10, W: 7, S: 3, G: 9 },
+    { H: 28, P: 26, F: 20, C: 16, M: 10, W: 7, S: 3, G: 9 },
+  ],
+
+  lowSymbols: ["C", "F", "P", "H"],
+
+  paytable: {
+    W: { "3": 50, "4": 200, "5": 1000 },
+    M: { "3": 25, "4": 80, "5": 250 },
+    C: { "3": 15, "4": 40, "5": 100 },
+    F: { "3": 10, "4": 30, "5": 80 },
+    P: { "3": 5, "4": 20, "5": 50 },
+    H: { "3": 5, "4": 15, "5": 40 },
+  },
+
+  coin: {
+    symbol: "G",
+    // Value is a multiple of the TOTAL bet, drawn per coin.
+    values: [
+      { value: 1, weight: 40 },
+      { value: 2, weight: 25 },
+      { value: 3, weight: 15 },
+      { value: 5, weight: 10 },
+      { value: 10, weight: 6 },
+      { value: 25, weight: 3 },
+      { value: 100, weight: 1 },
+    ],
+    needed: 5,
+  },
+
+  scatterPays: { "3": 2, "4": 10, "5": 50 },
+  freeSpins: { "3": 8, "4": 10, "5": 12 },
+  freeSpinMultiplier: 2,
+  retrigger: false,
+
+  /**
+   * 95.56%, which is what the original's own numbers return - computed exactly, not aimed at.
+   *
+   * The original shipped no RTP figure, so there was nothing to hit. Once the port was in place
+   * the closed-form maths said 95.560%, and since that is a perfectly reasonable return the
+   * honest move was to record it rather than massage a balanced game toward a rounder number.
+   *
+   * Its character differs from the other three, and deliberately so: about 80% of the return
+   * comes from base-game line hits, and the bonus is rare (1 in 166 spins against 1 in 35-52
+   * elsewhere). Changing that would be redesigning the game, not porting it.
+   */
+  rtpTarget: 0.9556,
+  betLevels: BET_LEVELS,
+};
+
+themes.push(wildHarbour);
 
 export function getTheme(slug: string): ThemeSpec {
   const theme = themes.find((t) => t.slug === slug);

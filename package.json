@@ -29,7 +29,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+    "slots:exact": "npm run exact --workspace @luck-cays/slot-gen --"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

@@ -68,10 +68,27 @@ export class ReelRenderer {
   private destroyed = false;
   private resizeObserver: ResizeObserver | null = null;
 
+  /**
+   * The reel strips, resolved once.
+   *
+   * This renderer animates a strip travelling to a stop, so it only works for a strip game.
+   * A weighted game has no strip and no stop - "242 Wild Harbour" ships its own renderer for
+   * exactly that reason - so being handed one is a programming error worth failing on rather
+   * than quietly drawing an empty reel.
+   */
+  private readonly strips: string[][];
+
   constructor(
     private readonly host: HTMLElement,
     private readonly config: SlotConfig,
-  ) {}
+  ) {
+    if (!config.reelStrips) {
+      throw new Error(
+        `ReelRenderer cannot render ${config.slug}: it uses weighted reels, which have no strip to land on`,
+      );
+    }
+    this.strips = config.reelStrips;
+  }
 
   get isSpinning(): boolean {
     return this.spinning;
@@ -257,7 +274,7 @@ export class ReelRenderer {
   /** Point every reel at a random stop, so the grid is not all one symbol before the first spin. */
   private randomiseStops(): void {
     this.reels.forEach((reel, index) => {
-      const strip = this.config.reelStrips[index] ?? [];
+      const strip = this.strips[index] ?? [];
       // Presentation only - no outcome is decided here, so Math.random is fine. Every real
       // outcome comes from the server's crypto.randomInt.
       reel.position = Math.floor(Math.random() * strip.length);
@@ -268,7 +285,7 @@ export class ReelRenderer {
   /** Update one reel's cell textures and scroll offset from its position. */
   private paintReel(index: number): void {
     const reel = this.reels[index];
-    const strip = this.config.reelStrips[index];
+    const strip = this.strips[index];
     if (!reel || !strip) return;
 
     const base = Math.floor(reel.position);
@@ -304,7 +321,7 @@ export class ReelRenderer {
     const stagger = quick ? 0.055 : 0.13;
 
     const tweens = this.reels.map((reel, index) => {
-      const strip = this.config.reelStrips[index] ?? [];
+      const strip = this.strips[index] ?? [];
       const target = stops[index] ?? 0;
 
       // Always travel forward past the target: landing backwards reads as a glitch.

@@ -16,10 +16,9 @@
  *    the database. A client cannot grant itself spins or replay them at a higher stake.
  */
 import {
-  buildGrid,
   evaluate,
-  pickStops,
   slotConfigSchema,
+  spinGrid,
   type SlotConfig,
   type SlotSpinResult,
   type SlotGameSummary,
@@ -120,8 +119,11 @@ export async function getGameConfig(slug: string): Promise<SlotConfig> {
 interface StoredRound {
   stops: number[];
   grid: string[][];
+  /** Null for a game without the coin feature. */
+  coinValues: SlotSpinResult["coinValues"];
   lineWins: SlotSpinResult["lineWins"];
   scatterWin: SlotSpinResult["scatterWin"];
+  coinWin: SlotSpinResult["coinWin"];
   freeSpinsAwarded: number;
   isFreeSpin: boolean;
   multiplier: number;
@@ -139,10 +141,13 @@ function toResult(
     gameSlug,
     stops: stored.stops,
     grid: stored.grid,
+    // Older rounds predate the coin feature, so default rather than assume the field.
+    coinValues: stored.coinValues ?? null,
     bet: round.bet.toString(10),
     totalWin: round.win.toString(10),
     lineWins: stored.lineWins,
     scatterWin: stored.scatterWin,
+    coinWin: stored.coinWin ?? null,
     freeSpinsAwarded: stored.freeSpinsAwarded,
     isFreeSpin: stored.isFreeSpin,
     freeSpinsRemaining,
@@ -205,17 +210,23 @@ export async function spin(request: SpinRequest): Promise<SlotSpinResult> {
       });
     }
 
-    // THE OUTCOME. crypto.randomInt only - see CLAUDE.md rule 3.
-    const stops = pickStops(game.config, secureRandomInt);
-    const grid = buildGrid(game.config, stops);
+    // THE OUTCOME. crypto.randomInt only - see CLAUDE.md rule 3. `spinGrid` handles either
+    // reel model and draws the coin values, so this does not care which kind of game it is.
+    const { grid, stops, coinValues } = spinGrid(game.config, secureRandomInt);
     const multiplier = isFreeSpin ? session.multiplier : 1;
-    const graded = evaluate(game.config, grid, { totalBet: bet, winMultiplier: multiplier });
+    const graded = evaluate(game.config, grid, {
+      totalBet: bet,
+      winMultiplier: multiplier,
+      coinValues,
+    });
 
     const stored: StoredRound = {
       stops,
       grid,
+      coinValues,
       lineWins: graded.lineWins,
       scatterWin: graded.scatterWin,
+      coinWin: graded.coinWin,
       freeSpinsAwarded: graded.freeSpinsAwarded,
       isFreeSpin,
       multiplier,

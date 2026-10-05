@@ -66,6 +66,7 @@ describe("minting a launch ticket", () => {
 
     const url = new URL(ticket.launchUrl);
     expect(url.pathname).toBe("/game.html");
+
     expect(url.searchParams.get("game")).toBe(GAME);
     expect(url.searchParams.get("brand")).toBe("reef");
     expect(ticketToken(ticket.launchUrl).length).toBeGreaterThan(20);
@@ -275,5 +276,42 @@ describe("game session scope", () => {
     const claims = await verifyGameToken(gameToken);
     // Even for an admin's account, the game session has no role claim at all.
     expect(claims["role"]).toBeUndefined();
+  });
+});
+
+describe("per-game clients", () => {
+  it("sends most games to the shared client", async () => {
+    const player = await makePlayer(10_000n);
+    const ticket = await createLaunch({
+      userId: player.userId,
+      gameSlug: GAME,
+      brand: "luck-cays",
+    });
+    expect(new URL(ticket.launchUrl).pathname).toBe("/game.html");
+  });
+
+  it("sends 242 Wild Harbour to its own client", async () => {
+    // It shipped as a complete build with its own art and animation, and it uses weighted
+    // reels plus a coin feature the shared PixiJS renderer does not draw.
+    const player = await makePlayer(10_000n);
+    const ticket = await createLaunch({
+      userId: player.userId,
+      gameSlug: "wild-harbour",
+      brand: "luck-cays",
+    });
+    expect(new URL(ticket.launchUrl).pathname).toBe("/games/wild-harbour/index.html");
+  });
+
+  it("still binds the session to that game and no other", async () => {
+    const player = await makePlayer(10_000n);
+    const ticket = await createLaunch({
+      userId: player.userId,
+      gameSlug: "wild-harbour",
+      brand: "luck-cays",
+    });
+    const token = new URL(ticket.launchUrl).searchParams.get("token") as string;
+
+    const session = await exchangeLaunch(token, undefined);
+    expect(session.gameSlug).toBe("wild-harbour");
   });
 });

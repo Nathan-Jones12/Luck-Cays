@@ -4,17 +4,15 @@ import type { SlotConfig } from "../types.js";
  * Reef Riches - the launch slot. Medium volatility, 20 fixed lines.
  *
  * GENERATED FILE - do not edit. Source of truth is `tools/slot-gen/src/specs.ts`;
- * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel
- * strips below are derived from the symbol counts, so hand-editing them makes the
- * composition documented here untrue.
+ * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel data below is
+ * derived from the spec, so hand-editing it makes the composition documented here untrue.
  *
  * Composition per 40-symbol strip:
  *   J 6  Q 6  A 5  K 5  ANCHOR 4  COMPASS 4  PARROT 3  SHIP 3  CHEST 2  KRAKEN 2
  *
  * Measured RTP lives in `docs/rtp/reef-riches.md`. Regenerate it with
- * `npm run rtp -- --game reef-riches --spins 1000000 --write-docs` after ANY
- * change here, and do not set this game `is_active` until the measured figure is
- * within 0.5% of `rtpTarget`.
+ * `npm run rtp -- --game reef-riches --spins 1000000 --write-docs` after ANY change here,
+ * and do not set this game `is_active` until the exact figure is within 0.5% of `rtpTarget`.
  */
 export const reefRiches: SlotConfig = {
   slug: "reef-riches",

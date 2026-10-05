@@ -6,8 +6,18 @@
  * free-spin multiplier. These are the rules a player would dispute, so they are the ones worth
  * nailing down.
  */
+import { randomInt } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { buildGrid, evaluate, lineOutcome, pickStops } from "./engine.js";
+import {
+  buildGrid,
+  evaluate,
+  lineOutcome,
+  pickStops,
+  reelModel,
+  scatterTier,
+  spinGrid,
+  type RandomInt,
+} from "./engine.js";
 import { getSlotConfig, slotGames } from "./index.js";
 import { slotConfigSchema, type SlotConfig } from "./types.js";
 
@@ -173,7 +183,7 @@ describe("evaluate", () => {
 
 describe("grid construction", () => {
   it("reads downward from the stop and wraps around the strip", () => {
-    const strip = reef.reelStrips[0] as string[];
+    const strip = (reef.reelStrips as string[][])[0] as string[];
     const stop = strip.length - 1;
     const built = buildGrid(reef, [stop, 0, 0, 0, 0]);
 
@@ -184,7 +194,7 @@ describe("grid construction", () => {
     const stops = pickStops(reef, (max) => max - 1);
     expect(stops).toHaveLength(reef.reels);
     stops.forEach((stop, reel) => {
-      expect(stop).toBe((reef.reelStrips[reel] as string[]).length - 1);
+      expect(stop).toBe(((reef.reelStrips as string[][])[reel] as string[]).length - 1);
     });
   });
 });
@@ -233,5 +243,246 @@ describe("every shipped config", () => {
         }
       }
     }
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Weighted reels and the coin feature                                        */
+/* -------------------------------------------------------------------------- */
+
+const harbour = getSlotConfig("wild-harbour");
+
+/** Deterministic RNG for the shape tests: always the lowest value in range. */
+const alwaysFirst: RandomInt = () => 0;
+
+/** A grid filled with one symbol, for building a case by hand. */
+function gridOf(config: SlotConfig, filler: string): string[][] {
+  return Array.from({ length: config.reels }, () =>
+    Array.from({ length: config.rows }, () => filler),
+  );
+}
+
+/** A coin-value matrix with no coins on it. */
+function emptyValues(config: SlotConfig): Array<Array<number | null>> {
+  return Array.from({ length: config.reels }, () =>
+    Array.from({ length: config.rows }, () => null),
+  );
+}
+
+describe("the weighted reel model", () => {
+  it("is the model this game declares", () => {
+    expect(reelModel(harbour)).toBe("weighted");
+    expect(harbour.reelWeights).toBeDefined();
+    expect(harbour.reelStrips).toBeUndefined();
+  });
+
+  it("has no stops to report, and says so rather than inventing them", () => {
+    expect(() => pickStops(harbour, alwaysFirst)).toThrow(/weighted/i);
+    expect(() => buildGrid(harbour, [0, 0, 0, 0, 0])).toThrow(/weighted/i);
+  });
+
+  it("spins a full grid of the declared shape", () => {
+    const spun = spinGrid(harbour, randomInt);
+    expect(spun.grid).toHaveLength(harbour.reels);
+    for (const column of spun.grid) expect(column).toHaveLength(harbour.rows);
+    // No strip, so no stop indices.
+    expect(spun.stops).toEqual([]);
+  });
+
+  it("never lands a zero-weight symbol on the reel that excludes it", () => {
+    // Reel 1 carries no wild, which is how the original keeps five-wild lines rare. One wild
+    // appearing there would change the top-line probability materially.
+    for (let i = 0; i < 3_000; i++) {
+      const { grid } = spinGrid(harbour, randomInt);
+      expect(grid[0]).not.toContain(harbour.wild.symbol);
+    }
+  });
+
+  it("draws every cell independently, so one reel can repeat a symbol", () => {
+    // The defining difference from strips. Over this many spins a repeat is near certain.
+    let sawRepeat = false;
+    for (let i = 0; i < 2_000 && !sawRepeat; i++) {
+      for (const column of spinGrid(harbour, randomInt).grid) {
+        if (new Set(column).size < column.length) sawRepeat = true;
+      }
+    }
+    expect(sawRepeat).toBe(true);
+  });
+
+  it("lands symbols in roughly their declared proportions", () => {
+    // A sanity check on the weighting, not a test of the CSPRNG, so the bounds are loose.
+    const counts = new Map<string, number>();
+    const spins = 4_000;
+
+    for (let i = 0; i < spins; i++) {
+      // Reel 1 only, so there is a single weight table to compare against.
+      const column = spinGrid(harbour, randomInt).grid[1] as string[];
+      for (const symbol of column) counts.set(symbol, (counts.get(symbol) ?? 0) + 1);
+    }
+
+    const weights = (harbour.reelWeights as Array<Record<string, number>>)[1] as Record<
+      string,
+      number
+    >;
+    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+    const cells = spins * harbour.rows;
+
+    for (const [symbol, weight] of Object.entries(weights)) {
+      if (weight === 0) continue;
+      const expected = (weight / totalWeight) * cells;
+      const seen = counts.get(symbol) ?? 0;
+      expect(
+        seen,
+        `${symbol} seen ${seen}, expected around ${expected.toFixed(0)}`,
+      ).toBeGreaterThan(expected * 0.7);
+      expect(seen).toBeLessThan(expected * 1.3);
+    }
+  });
+});
+
+describe("the coin feature", () => {
+  const coin = harbour.coin as NonNullable<SlotConfig["coin"]>;
+
+  it("gives a value to every coin and to nothing else", () => {
+    for (let i = 0; i < 400; i++) {
+      const { grid, coinValues } = spinGrid(harbour, randomInt);
+      expect(coinValues).not.toBeNull();
+      const values = coinValues as Array<Array<number | null>>;
+
+      for (const [reel, column] of grid.entries()) {
+        for (const [row, symbol] of column.entries()) {
+          const value = values[reel]?.[row];
+          if (symbol === coin.symbol) {
+            expect(typeof value, `coin at ${reel},${row} needs a value`).toBe("number");
+            expect(coin.values.some((entry) => entry.value === value)).toBe(true);
+          } else {
+            expect(value, `non-coin at ${reel},${row} must have no value`).toBeNull();
+          }
+        }
+      }
+    }
+  });
+
+  it("pays nothing below the threshold, however valuable the coins are", () => {
+    // Four coins at the maximum value. One short, so they are decoration.
+    const grid = gridOf(harbour, "H");
+    const values = emptyValues(harbour);
+    for (const reel of [0, 1, 2, 3]) {
+      (grid[reel] as string[])[0] = coin.symbol;
+      (values[reel] as Array<number | null>)[0] = 100;
+    }
+
+    const result = evaluate(harbour, grid, { totalBet: 100n, coinValues: values });
+    expect(result.coinWin).toBeNull();
+  });
+
+  it("pays the summed value times the total bet once the threshold is met", () => {
+    const grid = gridOf(harbour, "H");
+    const values = emptyValues(harbour);
+    const placed: Array<[number, number]> = [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 5],
+      [4, 10],
+    ];
+    for (const [reel, value] of placed) {
+      (grid[reel] as string[])[0] = coin.symbol;
+      (values[reel] as Array<number | null>)[0] = value;
+    }
+
+    const result = evaluate(harbour, grid, { totalBet: 100n, coinValues: values });
+    // 1+2+3+5+10 = 21, times the TOTAL bet of 100. Coins pay on total bet, not line bet.
+    expect(result.coinWin?.amount).toBe("2100");
+    expect(result.coinWin?.count).toBe(5);
+    expect(result.coinWin?.coins).toHaveLength(5);
+  });
+
+  it("multiplies coin wins during free spins, like every other win", () => {
+    const grid = gridOf(harbour, "H");
+    const values = emptyValues(harbour);
+    for (let reel = 0; reel < 5; reel++) {
+      (grid[reel] as string[])[0] = coin.symbol;
+      (values[reel] as Array<number | null>)[0] = 2;
+    }
+
+    const base = evaluate(harbour, grid, { totalBet: 100n, coinValues: values });
+    const free = evaluate(harbour, grid, {
+      totalBet: 100n,
+      coinValues: values,
+      winMultiplier: harbour.scatter.freeSpinMultiplier,
+    });
+
+    expect(BigInt(free.coinWin?.amount ?? "0")).toBe(
+      BigInt(base.coinWin?.amount ?? "0") * BigInt(harbour.scatter.freeSpinMultiplier),
+    );
+  });
+
+  it("refuses to grade a coin with no value, rather than paying zero for it", () => {
+    // A grid and value matrix that disagree is a bug. Silently paying nothing for a coin the
+    // player can see on screen would hide it.
+    const grid = gridOf(harbour, "H");
+    const values = emptyValues(harbour);
+    for (let reel = 0; reel < 5; reel++) (grid[reel] as string[])[0] = coin.symbol;
+
+    expect(() => evaluate(harbour, grid, { totalBet: 100n, coinValues: values })).toThrow(
+      /has no value/,
+    );
+  });
+
+  it("is never also a paying line symbol", () => {
+    // Both would pay for the same cell twice. The schema refuses it; this pins the intent.
+    expect(harbour.paytable[coin.symbol]).toBeUndefined();
+  });
+});
+
+describe("scatter counts above the top tier", () => {
+  it("pay the top tier rather than nothing", () => {
+    // A weighted grid can show six scatters. A raw table lookup would find no "6" entry and
+    // pay zero - less than five scatters pay, which would be plainly wrong.
+    const grid = gridOf(harbour, "H");
+    const cells: Array<[number, number]> = [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [3, 0],
+      [4, 0],
+      [0, 1],
+    ];
+    for (const [reel, row] of cells) (grid[reel] as string[])[row] = harbour.scatter.symbol;
+
+    const result = evaluate(harbour, grid, { totalBet: 100n, coinValues: emptyValues(harbour) });
+
+    expect(result.scatterWin?.count).toBe(6);
+    // Clamped to the "5" tier: 50 x the total bet.
+    expect(result.scatterWin?.amount).toBe("5000");
+    expect(result.freeSpinsAwarded).toBe(harbour.scatter.freeSpins["5"]);
+  });
+
+  it("resolve to the right tier", () => {
+    expect(scatterTier(harbour.scatter.pays, 4)).toBe("4");
+    expect(scatterTier(harbour.scatter.pays, 7)).toBe("5");
+    expect(scatterTier(harbour.scatter.pays, 2)).toBeNull();
+    expect(scatterTier(harbour.scatter.pays, 0)).toBeNull();
+  });
+});
+
+describe("the reel model is exclusive", () => {
+  it("refuses a config with both strips and weights", () => {
+    const base = structuredClone(harbour) as Record<string, unknown>;
+    base["reelStrips"] = Array.from({ length: 5 }, () => Array.from({ length: 12 }, () => "H"));
+    expect(() => slotConfigSchema.parse(base)).toThrow(/OR/i);
+  });
+
+  it("refuses a config with neither", () => {
+    const base = structuredClone(harbour) as Record<string, unknown>;
+    delete base["reelWeights"];
+    expect(() => slotConfigSchema.parse(base)).toThrow(/either/i);
+  });
+
+  it("refuses a reel whose weights are all zero", () => {
+    const base = structuredClone(harbour) as Record<string, unknown>;
+    (base["reelWeights"] as Array<Record<string, number>>)[2] = { H: 0, P: 0 };
+    expect(() => slotConfigSchema.parse(base)).toThrow(/weight above 0/);
   });
 });

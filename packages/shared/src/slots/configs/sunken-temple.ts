@@ -4,17 +4,15 @@ import type { SlotConfig } from "../types.js";
  * Sunken Temple - low volatility. Frequent small wins, an extra wild, a modest top line.
  *
  * GENERATED FILE - do not edit. Source of truth is `tools/slot-gen/src/specs.ts`;
- * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel
- * strips below are derived from the symbol counts, so hand-editing them makes the
- * composition documented here untrue.
+ * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel data below is
+ * derived from the spec, so hand-editing it makes the composition documented here untrue.
  *
  * Composition per 39-symbol strip:
  *   A 5  J 5  K 5  Q 5  BRAZIER 4  URN 4  IDOL 3  MASK 3  SERPENT 3  GLYPH 2
  *
  * Measured RTP lives in `docs/rtp/sunken-temple.md`. Regenerate it with
- * `npm run rtp -- --game sunken-temple --spins 1000000 --write-docs` after ANY
- * change here, and do not set this game `is_active` until the measured figure is
- * within 0.5% of `rtpTarget`.
+ * `npm run rtp -- --game sunken-temple --spins 1000000 --write-docs` after ANY change here,
+ * and do not set this game `is_active` until the exact figure is within 0.5% of `rtpTarget`.
  */
 export const sunkenTemple: SlotConfig = {
   slug: "sunken-temple",

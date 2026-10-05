@@ -4,17 +4,15 @@ import type { SlotConfig } from "../types.js";
  * Kraken's Depths - high volatility. Rarer premiums, a far bigger top line.
  *
  * GENERATED FILE - do not edit. Source of truth is `tools/slot-gen/src/specs.ts`;
- * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel
- * strips below are derived from the symbol counts, so hand-editing them makes the
- * composition documented here untrue.
+ * regenerate with `npm run generate --workspace @luck-cays/slot-gen`. The reel data below is
+ * derived from the spec, so hand-editing it makes the composition documented here untrue.
  *
  * Composition per 45-symbol strip:
  *   J 7  Q 7  A 6  K 6  URCHIN 5  JELLYFISH 4  LEVIATHAN 3  SHARK 3  PEARL 2  TENTACLE 2
  *
  * Measured RTP lives in `docs/rtp/krakens-depths.md`. Regenerate it with
- * `npm run rtp -- --game krakens-depths --spins 1000000 --write-docs` after ANY
- * change here, and do not set this game `is_active` until the measured figure is
- * within 0.5% of `rtpTarget`.
+ * `npm run rtp -- --game krakens-depths --spins 1000000 --write-docs` after ANY change here,
+ * and do not set this game `is_active` until the exact figure is within 0.5% of `rtpTarget`.
  */
 export const krakensDepths: SlotConfig = {
   slug: "krakens-depths",

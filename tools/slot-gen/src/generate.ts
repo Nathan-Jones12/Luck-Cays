@@ -19,8 +19,14 @@ function main(): void {
     const config = toSlotConfig(spec);
     const out = resolve(OUT_DIR, `${spec.slug}.ts`);
     writeFileSync(out, emitSource(spec));
+
+    // Describe whichever reel model the game uses; a weighted game has no strip length.
+    const reels = config.reelStrips
+      ? `${config.reelStrips[0]?.length ?? 0}-symbol strips`
+      : `weighted reels${config.coin ? " + coin feature" : ""}`;
+
     console.log(
-      `wrote ${spec.slug}.ts  (${config.reelStrips[0]?.length ?? 0}-symbol strips, ${config.paylines.length} lines, target ${(config.rtpTarget * 100).toFixed(1)}%)`,
+      `wrote ${spec.slug}.ts  (${reels}, ${config.paylines.length} lines, target ${(config.rtpTarget * 100).toFixed(2)}%)`,
     );
   }
   console.log(`\n${themes.length} configs written to packages/shared/src/slots/configs`);

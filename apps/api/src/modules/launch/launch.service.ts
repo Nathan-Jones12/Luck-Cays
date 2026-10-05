@@ -48,6 +48,31 @@ function assertOriginAllowed(origin: string | undefined): string | null {
   return origin;
 }
 
+/**
+ * Which client page serves a given game.
+ *
+ * Most games share one client: `game.html` reads the game's config and renders it with the
+ * PixiJS reel renderer, so a new strip-based theme needs no new page at all.
+ *
+ * "242 Wild Harbour" is the exception. It arrived as a complete, self-contained build with its
+ * own art, layout and animation, and it uses weighted reels plus a coin feature the shared
+ * renderer does not draw. Rebuilding that in PixiJS would have thrown away working work to no
+ * benefit, so it keeps its own page - made server-authoritative against our API - and this map
+ * is how a launch finds it.
+ *
+ * A deployment concern rather than a game-design one, which is why it lives here and not in the
+ * slot config.
+ */
+const GAME_CLIENTS: Record<string, string> = {
+  "wild-harbour": "/games/wild-harbour/index.html",
+};
+
+const DEFAULT_CLIENT = "/game.html";
+
+function clientPathFor(slug: string): string {
+  return GAME_CLIENTS[slug] ?? DEFAULT_CLIENT;
+}
+
 export interface CreateLaunchRequest {
   userId: string;
   gameSlug: string;
@@ -93,7 +118,7 @@ export async function createLaunch(request: CreateLaunchRequest): Promise<Launch
     },
   });
 
-  const launchUrl = new URL("/game.html", env.GAME_ORIGIN);
+  const launchUrl = new URL(clientPathFor(game.slug), env.GAME_ORIGIN);
   launchUrl.searchParams.set("token", token);
   // Slug and brand are in the URL purely so the shell can paint the right colours before it
   // has redeemed anything. They are never trusted - the ticket is the authority.

@@ -38,15 +38,15 @@ tolerance being checked.
 
 | | |
 | --- | --- |
-| Run at | 2026-10-01T16:32:16.366Z |
+| Run at | 2026-10-05T15:36:34.616Z |
 | Rounds simulated | 1,000,000 |
 | RNG | `crypto` (production path) |
-| Sampled RTP | 95.222% |
-| 95% CI | +/- 1.054pp |
+| Sampled RTP | 95.992% |
+| 95% CI | +/- 1.092pp |
 | Agrees with the exact figure | yes, within CI |
-| Hit frequency | 41.195% |
-| Volatility (SD of round return) | 5.38x |
-| Biggest single round | 562x bet |
+| Hit frequency | 41.232% |
+| Volatility (SD of round return) | 5.57x |
+| Biggest single round | 658x bet |
 
 Hit frequency and volatility are measured, not computed. Hit frequency is the chance that at
 least one of 20 paylines pays, and paylines share cells, so there is no product formula for
@@ -56,11 +56,11 @@ it - unlike expected value, which is immune to that dependence.
 
 | Round return | Share of rounds | Rounds |
 | --- | --- | --- |
-| 0x (no win) | 58.805% | 588,047 |
-| 0-1x | 29.079% | 290,785 |
-| 1-2x | 5.846% | 58,460 |
-| 2-5x | 3.321% | 33,207 |
-| 5-10x | 0.932% | 9,325 |
-| 10-25x | 1.189% | 11,887 |
-| 25-100x | 0.797% | 7,969 |
-| 100x+ | 0.032% | 320 |
+| 0x (no win) | 58.768% | 587,683 |
+| 0-1x | 29.153% | 291,531 |
+| 1-2x | 5.810% | 58,104 |
+| 2-5x | 3.318% | 33,177 |
+| 5-10x | 0.920% | 9,196 |
+| 10-25x | 1.192% | 11,925 |
+| 25-100x | 0.804% | 8,042 |
+| 100x+ | 0.034% | 342 |
