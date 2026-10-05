@@ -65,6 +65,7 @@ model User {
   vipProgress   VipProgress?
   refreshTokens RefreshToken[]
   authTokens    AuthToken[]
+  launchTokens  GameLaunchToken[]
   backupCodes   BackupCode[]
   bonusClaims   BonusClaim[]
   slotRounds    SlotRound[]
@@ -123,6 +124,46 @@ model AuthToken {
 
   @@index([userId, kind])
   @@map("auth_tokens")
+}
+
+/// A one-shot ticket that lets an embedded game start a session.
+///
+/// The embedding page never sees a real access token. It asks the API for a launch token,
+/// puts it in the iframe URL, and the game exchanges it once for a game-scoped session.
+/// That matters because URLs leak: they land in browser history, server logs and `Referer`
+/// headers. A token that is single-use and expires in a minute is worthless by the time it
+/// shows up anywhere.
+///
+/// `gameSlug` is bound at mint time, so a ticket for one game cannot be redeemed to play a
+/// different one.
+model GameLaunchToken {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  /// SHA-256 of the token. The token itself is never stored.
+  tokenHash String @unique @map("token_hash")
+
+  /// The game this ticket is for. Enforced on every spin for the resulting session.
+  gameSlug String @map("game_slug")
+
+  /// Which of our front-ends launched it, for theming and for attributing play.
+  brand String @default("luck-cays")
+
+  /// The origin allowed to embed this launch, checked when the token is exchanged.
+  /// Null means any origin, which is only sensible in development.
+  allowedOrigin String? @map("allowed_origin")
+
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("game_launch_tokens")
 }
 
 /// 2FA backup codes, Argon2id hashed and single use.

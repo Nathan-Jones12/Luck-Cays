@@ -17,6 +17,7 @@ import { globalLimiter } from "./middleware/rate-limit.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { walletRouter } from "./modules/wallet/wallet.routes.js";
 import { slotsRouter } from "./modules/slots/slots.routes.js";
+import { launchRouter } from "./modules/launch/launch.routes.js";
 import { vipRouter } from "./modules/vip/vip.routes.js";
 import { sportsRouter } from "./modules/sports/sports.routes.js";
 import { pokerRouter } from "./modules/poker/poker.routes.js";
@@ -61,11 +62,33 @@ export function createApp(): Express {
     }),
   );
 
+  /**
+   * An explicit allowlist, never a wildcard: credentialed requests require a named origin,
+   * and a wildcard would let any site call the API with the user's cookie.
+   *
+   * Three kinds of entry. `WEB_ORIGIN` is the main site. `GAME_ORIGIN` is where the
+   * embeddable game bundle is served, which has to reach `/api/launch/exchange` and
+   * `/api/slots/spin`. `EMBED_ORIGINS` is our other front-ends. All of them are ours - this
+   * is not a mechanism for letting a third party in.
+   */
+  const corsAllowlist = [
+    env.WEB_ORIGIN,
+    env.GAME_ORIGIN,
+    ...env.EMBED_ORIGINS.split(",")
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0),
+  ];
+
   app.use(
     cors({
-      // Exactly the frontend origin, never a wildcard: credentialed requests require it,
-      // and a wildcard would let any site call the API with the user's cookie.
-      origin: env.WEB_ORIGIN,
+      origin: (origin, callback) => {
+        // No Origin header: a same-origin or non-browser caller, such as a health check.
+        if (!origin) return callback(null, true);
+        if (corsAllowlist.includes(origin)) return callback(null, true);
+        // Reject by withholding the header rather than throwing, so the browser reports a
+        // normal CORS failure instead of the API returning a 500.
+        return callback(null, false);
+      },
       credentials: true,
       methods: ["GET", "POST", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
@@ -101,6 +124,7 @@ export function createApp(): Express {
   app.use("/api/auth", authRouter);
   app.use("/api/wallet", walletRouter);
   app.use("/api/slots", slotsRouter);
+  app.use("/api/launch", launchRouter);
   app.use("/api/vip", vipRouter);
   app.use("/api/sports", sportsRouter);
   app.use("/api/poker", pokerRouter);

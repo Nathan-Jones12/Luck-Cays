@@ -60,6 +60,7 @@ add the secret to an authenticator app. A fresh one is generated every time you 
 | **Sports betting**    | Complete for the v1 scope. Moneyline, spreads, totals, pre-match. Odds locked at placement, automatic settlement, bet slip.                                            |
 | **Poker**             | Playable. Full Hold'em state machine, side pots, action timers, reconnect grace, buy-in and cash-out through the wallet, live table UI.                                |
 | **Admin**             | Player lookup, chip adjustments, bans, game activation, manual results, job triggers, audit log.                                                                       |
+| **Embedding**         | Slots mount in an iframe on any of our front-ends, via a one-shot launch ticket and a game-scoped session. See [docs/embedding.md](docs/embedding.md).                 |
 
 ### Known gaps
 
@@ -164,6 +165,7 @@ Full reports in [`docs/rtp/`](docs/rtp/). To change a game:
 npm run slots:tune            # solves the paytable for the target, prints the numbers
 npm run slots:generate        # rewrites the configs
 npm run rtp -- --all --spins 1000000 --write-docs
+# embed demo at      http://localhost:5173/embed-demo.html
 ```
 
 A game must not be set `is_active` until its exact RTP is within 0.5% of target.
@@ -175,7 +177,7 @@ A game must not be set `is_active` until its exact RTP is within 0.5% of target.
 ```bash
 npm run dev            # API + web together
 npm run verify         # format, lint, typecheck, test - what CI runs
-npm run test           # 102 tests across shared, slot-gen and api
+npm run test           # 119 tests across shared, slot-gen and api
 npm run typecheck      # all five workspaces
 npm run db:studio      # browse the database
 npm run rtp -- --all   # simulate every game

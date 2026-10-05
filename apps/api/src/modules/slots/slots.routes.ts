@@ -6,7 +6,12 @@
  */
 import { Router } from "express";
 import { chipsFromJson, spinHistoryQuerySchema, spinSchema } from "@luck-cays/shared";
-import { authOf, requireAuth } from "../../middleware/auth.js";
+import {
+  assertGameAllowed,
+  authOf,
+  requireAuth,
+  requirePlayerOrGame,
+} from "../../middleware/auth.js";
 import { gameplayLimiter } from "../../middleware/rate-limit.js";
 import { body, query, validateBody, validateQuery } from "../../middleware/validate.js";
 import {
@@ -35,20 +40,24 @@ slotsRouter.get("/:slug", async (request, response) => {
   response.json({ config: await getGameConfig(slug) });
 });
 
-slotsRouter.get("/:slug/free-spins", requireAuth, async (request, response) => {
+slotsRouter.get("/:slug/free-spins", requirePlayerOrGame, async (request, response) => {
   const { userId } = authOf(request);
   const slug = String(request.params["slug"]);
+  assertGameAllowed(request, slug);
   response.json({ freeSpins: await getFreeSpinState(userId, slug) });
 });
 
+// Both the main site and an embedded game spin here.  accepts either
+// credential, and  stops a session minted for one game spinning another.
 slotsRouter.post(
   "/spin",
-  requireAuth,
+  requirePlayerOrGame,
   gameplayLimiter,
   validateBody(spinSchema),
   async (request, response) => {
     const { userId } = authOf(request);
     const input = body(request, spinSchema);
+    assertGameAllowed(request, input.gameSlug);
 
     response.json(
       await spin({

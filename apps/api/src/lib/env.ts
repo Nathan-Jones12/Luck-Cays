@@ -34,6 +34,20 @@ const envSchema = z
 
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     WEB_ORIGIN: z.string().url().default("http://localhost:5173"),
+
+    /**
+     * Where the embeddable game bundle is served from. A separate origin in production so an
+     * XSS in a host page cannot reach the game's session, and vice versa. In development it
+     * is the same Vite server, which loses that isolation but keeps the setup to one command.
+     */
+    GAME_ORIGIN: z.string().url().default("http://localhost:5173"),
+
+    /**
+     * Additional origins allowed to embed a game and to be used as a return URL, comma
+     * separated. WEB_ORIGIN is always allowed. This is an allowlist of OUR front-ends - it is
+     * not a way to let a third party embed games, which would need the operator wallet work.
+     */
+    EMBED_ORIGINS: z.string().default(""),
     TRUST_PROXY: z
       .string()
       .default("false")

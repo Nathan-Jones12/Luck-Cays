@@ -14,4 +14,5 @@ export * from "./schemas/vip.js";
 export * from "./schemas/sports.js";
 export * from "./schemas/poker.js";
 export * from "./schemas/admin.js";
+export * from "./schemas/embed.js";
 export * from "./slots/index.js";

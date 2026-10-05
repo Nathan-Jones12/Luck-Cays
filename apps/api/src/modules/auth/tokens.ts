@@ -21,7 +21,20 @@ import { unauthorized } from "../../lib/errors.js";
 
 const secret = new TextEncoder().encode(env.JWT_SECRET);
 const ISSUER = "luck-cays";
+
+/**
+ * Audience is what keeps an embedded game from being an account.
+ *
+ * A web token is the player: it can claim bonuses, read the ledger, change a password. A
+ * game token can do exactly one thing - spin the single game it was minted for. They are
+ * verified against different audiences, so neither is accepted where the other belongs, and
+ * that is enforced by the JWT library rather than by remembering to check a claim.
+ *
+ * This matters because the game runs in an iframe on pages we embed into. If a game session
+ * were a full account token, an XSS anywhere in that frame would be an account takeover.
+ */
 const AUDIENCE = "luck-cays-web";
+const GAME_AUDIENCE = "luck-cays-game";
 
 export interface AccessTokenClaims extends JWTPayload {
   sub: string;
@@ -67,6 +80,68 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenClaim
       throw unauthorized("Access token expired", "TOKEN_EXPIRED");
     }
     throw unauthorized("Invalid access token", "TOKEN_INVALID");
+  }
+}
+
+/* ------------------------------- game sessions ----------------------------- */
+
+/** How long an embedded game session lasts before the host must mint a fresh ticket. */
+const GAME_SESSION_TTL = "2h";
+const GAME_SESSION_TTL_SECONDS = 2 * 3_600;
+
+export interface GameTokenClaims extends JWTPayload {
+  sub: string;
+  /** The one game this session may play. Checked on every spin. */
+  gameSlug: string;
+  brand: string;
+}
+
+export function gameSessionTtlSeconds(): number {
+  return GAME_SESSION_TTL_SECONDS;
+}
+
+/**
+ * Mint a session for an embedded game.
+ *
+ * Note what is absent: no role. A game token cannot reach a staff route even if one forgot
+ * to gate it, because there is no role claim to satisfy and the audience is wrong anyway.
+ */
+export async function signGameToken(
+  userId: string,
+  gameSlug: string,
+  brand: string,
+): Promise<string> {
+  return new SignJWT({ gameSlug, brand })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(userId)
+    .setIssuer(ISSUER)
+    .setAudience(GAME_AUDIENCE)
+    .setIssuedAt()
+    .setExpirationTime(GAME_SESSION_TTL)
+    .sign(secret);
+}
+
+export async function verifyGameToken(token: string): Promise<GameTokenClaims> {
+  try {
+    const { payload } = await jwtVerify(token, secret, {
+      issuer: ISSUER,
+      audience: GAME_AUDIENCE,
+    });
+
+    if (
+      typeof payload.sub !== "string" ||
+      typeof payload.gameSlug !== "string" ||
+      typeof payload.brand !== "string"
+    ) {
+      throw unauthorized("Malformed game session", "GAME_SESSION_INVALID");
+    }
+
+    return payload as GameTokenClaims;
+  } catch (error) {
+    if (error instanceof Error && error.name === "JWTExpired") {
+      throw unauthorized("Game session expired", "GAME_SESSION_EXPIRED");
+    }
+    throw unauthorized("Invalid game session", "GAME_SESSION_INVALID");
   }
 }
 

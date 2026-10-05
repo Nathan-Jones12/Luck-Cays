@@ -8,7 +8,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import type { Role } from "@luck-cays/shared";
 import { forbidden, unauthorized } from "../lib/errors.js";
-import { verifyAccessToken } from "../modules/auth/tokens.js";
+import { verifyAccessToken, verifyGameToken } from "../modules/auth/tokens.js";
 import { prisma } from "../lib/prisma.js";
 
 export interface AuthContext {
@@ -22,6 +22,11 @@ declare global {
     interface Request {
       /** Set by `requireAuth`. Absent on public routes. */
       auth?: AuthContext;
+      /**
+       * Set by `requirePlayerOrGame` when the caller is an embedded game rather than a
+       * signed-in player. Its presence means the request is scoped to one game.
+       */
+      game?: GameContext;
     }
   }
 }
@@ -105,4 +110,80 @@ export function requireRole(...roles: Role[]): RequestHandler {
 export function authOf(request: Request): AuthContext {
   if (!request.auth) throw unauthorized();
   return request.auth;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Embedded game sessions                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface GameContext {
+  userId: string;
+  /** The only game this session may play. */
+  gameSlug: string;
+  brand: string;
+}
+
+/**
+ * Accept either a normal player session or an embedded game session.
+ *
+ * Used on the spin route, which both the main site and an embedded game need to reach. The
+ * two are kept apart by JWT audience, so a game token cannot be presented to `requireAuth`
+ * and a player token cannot be presented here - `verifyAccessToken` and `verifyGameToken`
+ * check different audiences and neither accepts the other's.
+ *
+ * A game session additionally carries the slug it was minted for. `assertGameAllowed` is
+ * what stops a session for one game being used to spin another, which is the whole reason
+ * the slug is in the token rather than only in the URL.
+ */
+export const requirePlayerOrGame: RequestHandler = async (request, _response, next) => {
+  try {
+    const token = bearerToken(request);
+    if (!token) throw unauthorized();
+
+    // Try the game audience first: an embedded session is the narrower credential, and
+    // trying it first means a game token never touches the player path at all.
+    let userId: string;
+    try {
+      const claims = await verifyGameToken(token);
+      request.game = {
+        userId: claims.sub,
+        gameSlug: claims.gameSlug,
+        brand: claims.brand,
+      };
+      userId = claims.sub;
+    } catch {
+      const claims = await verifyAccessToken(token);
+      userId = claims.sub;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, status: true },
+    });
+    if (!user) throw unauthorized("Account not found", "USER_NOT_FOUND");
+
+    if (user.status === "banned") throw forbidden("This account is suspended", "ACCOUNT_BANNED");
+    if (user.status === "self_excluded") {
+      throw forbidden("This account is self-excluded", "ACCOUNT_SELF_EXCLUDED");
+    }
+
+    request.auth = { userId: user.id, role: user.role as Role };
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reject a request whose game session was minted for a different game.
+ *
+ * A no-op for a normal player session, which is not restricted to one game.
+ */
+export function assertGameAllowed(request: Request, gameSlug: string): void {
+  const game = request.game;
+  if (!game) return;
+
+  if (game.gameSlug !== gameSlug) {
+    throw forbidden("This game session is not valid for that game", "GAME_SESSION_WRONG_GAME");
+  }
 }

@@ -26,6 +26,7 @@ const TABLES_IN_DELETE_ORDER = [
   "wallets",
   "backup_codes",
   "auth_tokens",
+  "game_launch_tokens",
   "refresh_tokens",
   "audit_log",
   "users",

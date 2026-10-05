@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Embed demo &middot; Luck-Cays</title>
+    <style>
+      /*
+       * Deliberately NOT styled like Luck-Cays. This stands in for one of our other
+       * front-ends, so it should look like somebody else's page - that is the only way to see
+       * whether the embed sits properly inside a layout it does not control.
+       */
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0;
+        font:
+          15px/1.55 ui-sans-serif,
+          system-ui,
+          sans-serif;
+        background: #f4f6f8;
+        color: #16222e;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #11161b;
+          color: #e6edf3;
+        }
+        .card,
+        header {
+          background: #1a222b !important;
+          border-color: #2b3744 !important;
+        }
+        input {
+          background: #11161b;
+          color: inherit;
+          border-color: #2b3744;
+        }
+        pre {
+          background: #11161b !important;
+        }
+      }
+      header {
+        background: #fff;
+        border-bottom: 1px solid #dde3e9;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        position: sticky;
+        top: 0;
+      }
+      .brand {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .pill {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        background: #eef2f6;
+        border: 1px solid #dde3e9;
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-weight: 650;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 22px 18px 60px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #dde3e9;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin: 0 0 6px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      .muted {
+        opacity: 0.68;
+        font-size: 0.9rem;
+      }
+      label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.6;
+        margin: 10px 0 4px;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccd5dd;
+        border-radius: 8px;
+        font: inherit;
+        box-sizing: border-box;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .row > * {
+        flex: 1;
+        min-width: 180px;
+      }
+      button {
+        font: inherit;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 8px;
+        border: 0;
+        background: #16222e;
+        color: #fff;
+        cursor: pointer;
+        margin-top: 14px;
+      }
+      button.secondary {
+        background: transparent;
+        border: 1px solid #ccd5dd;
+        color: inherit;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      pre {
+        background: #0d1117;
+        color: #c9d1d9;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        max-height: 190px;
+        overflow: auto;
+        margin: 0;
+      }
+      .err {
+        color: #b42318;
+        font-size: 0.88rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A pretend host-site header, including a balance the embed keeps up to date. -->
+    <header>
+      <span class="brand">Some Other Site</span>
+      <span class="muted">a page that is not Luck-Cays</span>
+      <span class="spacer"></span>
+      <span class="pill" id="balance">— LC</span>
+    </header>
+
+    <main>
+      <div class="card">
+        <h1>Embed demo</h1>
+        <p class="muted">
+          This page is a stand-in for one of our other front-ends. It signs in against the API,
+          mints a launch ticket, and mounts the game with
+          <code>embed.js</code> &mdash; exactly as documented in <code>docs/embedding.md</code>.
+          Watch the balance in the header update from inside the iframe.
+        </p>
+
+        <div id="login">
+          <div class="row">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" type="email" value="player@luck-cays.test" />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <input id="password" type="password" value="luckcays-demo-2026" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="game">Game</label>
+              <select id="game">
+                <option value="reef-riches">Reef Riches</option>
+                <option value="krakens-depths">Kraken's Depths</option>
+                <option value="sunken-temple">Sunken Temple</option>
+              </select>
+            </div>
+            <div>
+              <label for="brand">Brand accent</label>
+              <select id="brand">
+                <option value="luck-cays">luck-cays (gold)</option>
+                <option value="reef" selected>reef (teal)</option>
+                <option value="abyss">abyss (blue)</option>
+                <option value="temple">temple (green)</option>
+              </select>
+            </div>
+          </div>
+          <button id="start">Sign in &amp; mount the game</button>
+          <button id="unmount" class="secondary" style="display: none">Unmount</button>
+          <p class="err" id="error"></p>
+        </div>
+      </div>
+
+      <div class="card" id="slot-card" style="display: none">
+        <div id="slot"></div>
+      </div>
+
+      <div class="card">
+        <label>postMessage traffic from the iframe</label>
+        <pre id="log">nothing yet</pre>
+      </div>
+    </main>
+
+    <script src="/embed.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const lines = [];
+
+      function log(message) {
+        lines.unshift(new Date().toLocaleTimeString() + "  " + message);
+        $("log").textContent = lines.slice(0, 40).join("\n");
+      }
+
+      let accessToken = null;
+      let handle = null;
+
+      async function signIn(email, password) {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error?.message ?? "Could not sign in");
+        return payload.accessToken;
+      }
+
+      $("start").addEventListener("click", async () => {
+        $("error").textContent = "";
+        $("start").disabled = true;
+
+        try {
+          accessToken = await signIn($("email").value.trim(), $("password").value);
+          log("host signed in; minting a launch ticket");
+
+          $("slot-card").style.display = "block";
+          $("unmount").style.display = "inline-block";
+
+          handle = LuckCays.mount("#slot", {
+            apiBase: "/api",
+            game: $("game").value,
+            brand: $("brand").value,
+
+            // The host's own token. It authorises the ticket request and never enters the iframe.
+            getAuthToken: () => accessToken,
+
+            onReady: (slug) => log("ready: " + slug),
+            onBalance: (balance) => {
+              $("balance").textContent = Number(balance).toLocaleString() + " LC";
+              log("balance -> " + balance);
+            },
+            onRound: (round) =>
+              log(
+                "round: bet " +
+                  round.bet +
+                  ", win " +
+                  round.win +
+                  (round.freeSpinsAwarded ? ", +" + round.freeSpinsAwarded + " free spins" : ""),
+              ),
+            onExit: () => {
+              log("player closed the game");
+              handle?.destroy();
+              $("slot-card").style.display = "none";
+            },
+            onError: (error) => {
+              log("error: " + error.message);
+              $("error").textContent = error.message;
+            },
+          });
+        } catch (error) {
+          $("error").textContent = error.message;
+          log("failed: " + error.message);
+        } finally {
+          $("start").disabled = false;
+        }
+      });
+
+      $("unmount").addEventListener("click", () => {
+        handle?.destroy();
+        handle = null;
+        $("slot-card").style.display = "none";
+        $("unmount").style.display = "none";
+        log("unmounted (iframe removed, listener detached)");
+      });
+    </script>
+  </body>
+</html>

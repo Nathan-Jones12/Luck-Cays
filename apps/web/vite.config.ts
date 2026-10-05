@@ -34,5 +34,15 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+
+    rollupOptions: {
+      // Two entry points. The main site and the embeddable game share the renderer and the
+      // API client but ship as separate pages, so a host embedding one game does not pull
+      // down the lobby, the sportsbook or the poker table.
+      input: {
+        main: resolve(import.meta.dirname, "index.html"),
+        game: resolve(import.meta.dirname, "game.html"),
+      },
+    },
   },
 });

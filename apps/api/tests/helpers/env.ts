@@ -25,5 +25,9 @@ if (process.env.DATABASE_PROVIDER === "sqlite") {
 process.env.JWT_SECRET ??= randomBytes(48).toString("base64");
 process.env.FIELD_ENCRYPTION_KEY ??= randomBytes(32).toString("base64");
 
+process.env.WEB_ORIGIN ??= "http://localhost:5173";
+process.env.GAME_ORIGIN ??= "http://localhost:5173";
+process.env.EMBED_ORIGINS ??= "http://localhost:4173";
+
 process.env.SIGNUP_BONUS_CHIPS = "10000";
 process.env.DAILY_BONUS_CHIPS = "2500";
