@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  chipStringSchema,
   paginationSchema,
   roleSchema,
   signedChipStringSchema,
@@ -58,3 +59,21 @@ export const auditQuerySchema = paginationSchema.extend({
   action: z.string().max(60).optional(),
   actorId: z.string().max(64).optional(),
 });
+
+/**
+ * Grant free spins to a player on one game.
+ *
+ * This hands over real expected value - a free spin pays at its locked bet without a stake -
+ * so it is admin-only, the reason is mandatory, and it lands in the audit log beside chip
+ * adjustments. It exists so the bonus can be demonstrated and supported without touching a
+ * game's odds, which cannot be done without wrecking its RTP.
+ */
+export const grantFreeSpinsSchema = z.object({
+  userId: z.string().min(1),
+  gameSlug: z.string().min(1).max(60),
+  spins: z.number().int().min(1).max(100),
+  /** The bet the spins are locked to. Must be one of the game's levels. */
+  bet: chipStringSchema,
+  reason: z.string().trim().min(5).max(500),
+});
+export type GrantFreeSpinsInput = z.infer<typeof grantFreeSpinsSchema>;

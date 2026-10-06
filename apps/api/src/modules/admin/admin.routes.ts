@@ -12,20 +12,23 @@
 import { Router } from "express";
 import {
   adjustChipsSchema,
+  chipsFromJson,
   auditQuerySchema,
   playerSearchSchema,
+  grantFreeSpinsSchema,
   setEventResultSchema,
   setUserRoleSchema,
   setUserStatusSchema,
   settleBetSchema,
   slotConfigSchema,
+  type SlotConfig,
   updateSlotGameSchema,
 } from "@luck-cays/shared";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { authOf, requireAuth, requireRole } from "../../middleware/auth.js";
 import { body, query, validateBody, validateQuery } from "../../middleware/validate.js";
-import { invalidateSlotConfigCache } from "../slots/slots.service.js";
+import { grantFreeSpins, invalidateSlotConfigCache } from "../slots/slots.service.js";
 import { setEventResult, settleResolvedEvents, voidBet } from "../sports/sports.service.js";
 import { syncFromProvider } from "../sports/sports.sync.js";
 import { auditWallet, credit, debit, getLedger } from "../wallet/wallet.service.js";
@@ -284,17 +287,33 @@ adminRouter.post(
 adminRouter.get("/slots", async (_request, response) => {
   const rows = await prisma.slotGame.findMany({
     orderBy: { name: "asc" },
-    select: { slug: true, name: true, isActive: true, rtpTargetBp: true, updatedAt: true },
+    select: {
+      slug: true,
+      name: true,
+      isActive: true,
+      rtpTargetBp: true,
+      updatedAt: true,
+      configJson: true,
+    },
   });
 
   response.json({
-    games: rows.map((row) => ({
-      slug: row.slug,
-      name: row.name,
-      isActive: row.isActive,
-      rtpTarget: row.rtpTargetBp / 10_000,
-      updatedAt: row.updatedAt.toISOString(),
-    })),
+    games: rows.map((row) => {
+      // The bet levels and the bonus multiplier come from the stored config so the back
+      // office can offer only bets the game actually accepts, rather than a free number box
+      // whose plausible-looking entries the API would reject.
+      const config = JSON.parse(row.configJson) as SlotConfig;
+
+      return {
+        slug: row.slug,
+        name: row.name,
+        isActive: row.isActive,
+        rtpTarget: row.rtpTargetBp / 10_000,
+        betLevels: config.betLevels,
+        freeSpinMultiplier: config.scatter.freeSpinMultiplier,
+        updatedAt: row.updatedAt.toISOString(),
+      };
+    }),
   });
 });
 
@@ -349,6 +368,51 @@ adminRouter.patch(
     });
 
     response.status(204).end();
+  },
+);
+
+/**
+ * Grant free spins on a game.
+ *
+ * Here because a game bonus cannot be made more frequent without wrecking its RTP - on 242
+ * Wild Harbour, moving the scatter weight from 3 to 5 takes the return from 95.6% to 121% -
+ * so demonstrating or supporting the feature has to happen outside the odds.
+ *
+ * Admin only, reason mandatory, audited. Free spins pay at their locked bet with no stake, so
+ * this hands over real expected value and belongs in the same drawer as a chip adjustment.
+ */
+adminRouter.post(
+  "/slots/free-spins",
+  requireRole("admin"),
+  validateBody(grantFreeSpinsSchema),
+  async (request, response) => {
+    const actor = authOf(request);
+    const input = body(request, grantFreeSpinsSchema);
+
+    const grant = await grantFreeSpins({
+      userId: input.userId,
+      gameSlug: input.gameSlug,
+      spins: input.spins,
+      bet: chipsFromJson(input.bet),
+    });
+
+    await audit({
+      actorId: actor.userId,
+      action: AUDIT_ACTIONS.adminGrantFreeSpins,
+      targetType: "user",
+      targetId: input.userId,
+      details: {
+        gameSlug: input.gameSlug,
+        spins: input.spins,
+        bet: input.bet,
+        multiplier: grant.multiplier,
+        remainingAfter: grant.remaining,
+        reason: input.reason,
+      },
+      ip: request.ip,
+    });
+
+    response.json(grant);
   },
 );
 

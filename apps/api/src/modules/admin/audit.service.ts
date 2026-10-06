@@ -26,6 +26,7 @@ export const AUDIT_ACTIONS = {
   adminStatusChange: "admin.status_change",
   adminRoleChange: "admin.role_change",
   adminGameConfig: "admin.game_config",
+  adminGrantFreeSpins: "admin.grant_free_spins",
   adminSettleBet: "admin.settle_bet",
   adminSetEventResult: "admin.set_event_result",
   adminConfigChange: "admin.config_change",

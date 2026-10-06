@@ -427,3 +427,97 @@ export async function getSpinHistory(
     nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null,
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Granting free spins                                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface GrantFreeSpinsRequest {
+  userId: string;
+  gameSlug: string;
+  spins: number;
+  bet: bigint;
+}
+
+export interface FreeSpinGrant {
+  gameSlug: string;
+  remaining: number;
+  bet: string;
+  multiplier: number;
+}
+
+/**
+ * Give a player free spins on a game, outside the normal trigger.
+ *
+ * This exists because a game's bonus frequency cannot be raised to make the feature easier to
+ * see without wrecking its RTP - on 242 Wild Harbour, nudging the scatter weight from 3 to 5
+ * takes the return from 95.6% to 121%. Granting spins directly leaves the odds and the
+ * published figure alone.
+ *
+ * It hands over real expected value, so the route above it is admin-only and audited. The bet
+ * is validated against the game's own levels rather than trusted: free spins pay at their
+ * locked bet, so an arbitrary one would be an arbitrary amount of value.
+ */
+export async function grantFreeSpins(request: GrantFreeSpinsRequest): Promise<FreeSpinGrant> {
+  const game = await loadGame(request.gameSlug);
+
+  if (!game.config.betLevels.includes(Number(request.bet))) {
+    throw badRequest("INVALID_BET", "That bet is not offered on this game", {
+      allowed: game.config.betLevels,
+    });
+  }
+
+  // Checked explicitly so an unknown id is a 404 rather than a foreign-key failure at insert.
+  const player = await prisma.user.findUnique({
+    where: { id: request.userId },
+    select: { id: true },
+  });
+  if (!player) throw notFound("No such player", "USER_NOT_FOUND");
+
+  const multiplier = game.config.scatter.freeSpinMultiplier;
+
+  // One session per player per game, so a grant tops up an existing run rather than creating a
+  // second one the spin service would never see.
+  const existing = await prisma.slotFreeSpinSession.findFirst({
+    where: { userId: request.userId, gameId: game.id },
+    select: { id: true, remaining: true, bet: true, multiplier: true },
+  });
+
+  // A spent session is just a leftover row, so the grant sets its own bet. A run still in
+  // progress is not: its spins are locked to the bet that triggered them, and rewriting that
+  // would change what the player is owed for spins they already earned. Top those up at the
+  // bet they already have and report it back, so the admin sees what actually happened.
+  const inProgress = existing !== null && existing.remaining > 0;
+
+  const session = existing
+    ? await prisma.slotFreeSpinSession.update({
+        where: { id: existing.id },
+        data: {
+          remaining: { increment: request.spins },
+          ...(inProgress ? {} : { bet: request.bet, multiplier, triggerRoundId: null }),
+        },
+        select: { remaining: true, bet: true, multiplier: true },
+      })
+    : await prisma.slotFreeSpinSession.create({
+        data: {
+          userId: request.userId,
+          gameId: game.id,
+          bet: request.bet,
+          remaining: request.spins,
+          multiplier,
+        },
+        select: { remaining: true, bet: true, multiplier: true },
+      });
+
+  logger.info(
+    { userId: request.userId, gameSlug: game.slug, spins: request.spins },
+    "free spins granted",
+  );
+
+  return {
+    gameSlug: game.slug,
+    remaining: session.remaining,
+    bet: session.bet.toString(10),
+    multiplier: session.multiplier,
+  };
+}

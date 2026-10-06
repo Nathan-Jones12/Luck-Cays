@@ -59,7 +59,7 @@ add the secret to an authenticator app. A fresh one is generated every time you 
 | **VIP**               | Complete. Points on every wager, five tiers, level-up bonuses, daily-bonus multiplier, weekly cashback.                                                                                                                                                           |
 | **Sports betting**    | Complete for the v1 scope. Moneyline, spreads, totals, pre-match. Odds locked at placement, automatic settlement, bet slip.                                                                                                                                       |
 | **Poker**             | Playable. Full Hold'em state machine, side pots, action timers, reconnect grace, buy-in and cash-out through the wallet, live table UI.                                                                                                                           |
-| **Admin**             | Player lookup, chip adjustments, bans, game activation, manual results, job triggers, audit log.                                                                                                                                                                  |
+| **Admin**             | Player lookup, chip adjustments, bans, game activation, manual results, job triggers, free-spin grants, audit log.                                                                                                                                                |
 | **Embedding**         | Slots mount in an iframe on any of our front-ends, via a one-shot launch ticket and a game-scoped session. See [docs/embedding.md](docs/embedding.md).                                                                                                            |
 
 ### Known gaps
@@ -170,6 +170,23 @@ npm run rtp -- --all --spins 1000000 --write-docs
 ```
 
 A game must not be set `is_active` until its exact RTP is within 0.5% of target.
+
+### Seeing a bonus without changing one
+
+A bonus is rare by design, and it cannot be made less rare without breaking the return. The
+scatter pays, so its frequency and the RTP move together: on 242 Wild Harbour, raising the
+scatter weight from 3 to 5 takes the exact RTP from 95.56% to **121.4%**, and 3 to 7 takes it
+to 182.2%. There is no setting that makes the feature common and the game honest.
+
+```bash
+npm run slots:probe -- wild-harbour S 3 5 7 9 12   # the trade-off, exactly, before committing
+```
+
+So to actually watch the feature, the back office grants spins instead. Open a player in
+**Admin → Players**, then **Grant free spins**: pick the game, a count, and one of that
+game's own bet levels. The spins behave exactly like triggered ones — same multiplier, no
+stake taken, recorded at zero turnover — and the grant is audited like a chip adjustment,
+because a free spin pays real value. It is admin-only; support cannot reach it.
 
 ---
 

@@ -7,7 +7,7 @@
  * inconsistent wallet means something wrote a balance outside the wallet service and that needs
  * to be visible rather than buried.
  */
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { formatChips } from "@luck-cays/shared";
 import { api, ApiError } from "@/api/client";
 import { useAuthStore } from "@/stores/auth";
@@ -63,6 +63,8 @@ interface AdminGame {
   name: string;
   isActive: boolean;
   rtpTarget: number;
+  betLevels: number[];
+  freeSpinMultiplier: number;
   updatedAt: string;
 }
 
@@ -82,9 +84,30 @@ const notice = ref<string | null>(null);
 const adjustAmount = ref(0);
 const adjustReason = ref("");
 
+// Granting free spins, so the bonus can be demonstrated without touching a game odds.
+const fsGame = ref("");
+const fsSpins = ref(10);
+const fsBet = ref(0);
+const fsReason = ref("Demonstrating the free-spin feature");
+
+const selectedGame = computed(() => games.value.find((game) => game.slug === fsGame.value) ?? null);
+const betLevels = computed(() => selectedGame.value?.betLevels ?? []);
+
+// Picking a game picks a valid bet with it, and drops one that the new game does not offer.
+watch(selectedGame, (game) => {
+  if (!game) return;
+  if (!game.betLevels.includes(fsBet.value)) fsBet.value = game.betLevels[0] ?? 0;
+});
+
 const canWrite = computed(() => auth.isAdmin);
 
-onMounted(() => void loadPlayers());
+// Sequential, not parallel: every loader shares the one busy/notice/error trio, so two in
+// flight at once would overwrite each others state.
+onMounted(async () => {
+  await loadPlayers();
+  // The free-spin form needs the game list to offer valid bets, and the Games tab wants it too.
+  await loadGames();
+});
 
 async function run(work: () => Promise<void>, successMessage?: string): Promise<void> {
   busy.value = true;
@@ -162,6 +185,42 @@ async function toggleGame(game: AdminGame): Promise<void> {
     },
     `${game.name} is now ${game.isActive ? "inactive" : "active"}.`,
   );
+}
+
+/**
+ * Grant free spins to the selected player.
+ *
+ * This is here rather than in a game config because a bonus cannot be made more frequent
+ * without wrecking the RTP - on 242 Wild Harbour, nudging the scatter weight from 3 to 5 takes
+ * the return from 95.6% to 121%. Granting spins directly leaves the odds alone.
+ */
+async function grantFreeSpins(): Promise<void> {
+  const player = selected.value?.player;
+  if (!player || !fsGame.value) return;
+
+  await run(async () => {
+    const grant = await api.post<{ remaining: number; bet: string; multiplier: number }>(
+      "/admin/slots/free-spins",
+      {
+        userId: player.id,
+        gameSlug: fsGame.value,
+        spins: fsSpins.value,
+        bet: String(fsBet.value),
+        reason: fsReason.value,
+      },
+    );
+    notice.value =
+      player.username +
+      " now has " +
+      grant.remaining +
+      " free spins on " +
+      fsGame.value +
+      " at " +
+      formatChips(grant.bet) +
+      " LC, paying x" +
+      grant.multiplier +
+      ". Written to the audit log.";
+  });
 }
 
 async function loadAudit(): Promise<void> {
@@ -352,6 +411,62 @@ function when(iso: string): string {
               Self-exclude
             </button>
           </div>
+
+          <hr class="divider" />
+          <h3>Grant free spins</h3>
+          <p class="tiny faint">
+            A game's bonus cannot be made more frequent without wrecking its RTP &mdash; on 242 Wild
+            Harbour, moving the scatter weight from 3 to 5 takes the return from 95.6% to 121%. So
+            the feature is demonstrated and supported from here instead, leaving the odds and the
+            published figures alone. Free spins pay at their locked bet with no stake, so this is
+            real value and it is audited like a chip adjustment.
+          </p>
+
+          <div class="adjust">
+            <div class="field">
+              <label for="fs-game">Game</label>
+              <select id="fs-game" v-model="fsGame">
+                <option value="" disabled>Choose&hellip;</option>
+                <option v-for="game in games" :key="game.slug" :value="game.slug">
+                  {{ game.name }}
+                </option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="fs-spins">Spins</label>
+              <input id="fs-spins" v-model.number="fsSpins" type="number" min="1" max="100" />
+            </div>
+            <div class="field">
+              <label for="fs-bet">Bet (LC)</label>
+              <!-- Only the game's own levels: the API rejects anything else, so offering a
+                   free number box would just invite a plausible entry that fails. -->
+              <select id="fs-bet" v-model.number="fsBet" :disabled="!fsGame">
+                <option v-for="level in betLevels" :key="level" :value="level">
+                  {{ level.toLocaleString("en-US") }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="fs-reason">Reason (required, audited)</label>
+            <input id="fs-reason" v-model="fsReason" minlength="5" />
+          </div>
+
+          <button
+            class="btn btn-teal btn-sm"
+            :disabled="busy || !fsGame || !fsBet || fsSpins < 1 || fsReason.trim().length < 5"
+            @click="grantFreeSpins"
+          >
+            Grant {{ fsSpins }} free spins
+          </button>
+          <p v-if="selectedGame" class="tiny faint">
+            {{ selectedGame.name }} pays free spins at
+            <strong>&times;{{ selectedGame.freeSpinMultiplier }}</strong
+            >. {{ fsSpins }} spins at {{ fsBet.toLocaleString("en-US") }} LC is
+            {{ (fsSpins * fsBet).toLocaleString("en-US") }} LC of turnover the player does not
+            stake.
+          </p>
         </template>
 
         <hr class="divider" />
