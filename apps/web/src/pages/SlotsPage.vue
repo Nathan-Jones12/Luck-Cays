@@ -30,6 +30,10 @@ const THEME_NOTES: Record<string, { tag: string; note: string }> = {
     tag: "Low volatility",
     note: "Hits most often, with an extra wild on every reel and a gentler ceiling.",
   },
+  harbour: {
+    tag: "Coin collect",
+    note: "Collect five or more coins to bank every value on the grid. A rare but generous bonus.",
+  },
 };
 
 onMounted(async () => {

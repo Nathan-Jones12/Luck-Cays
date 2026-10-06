@@ -21,6 +21,7 @@ import {
 import { api, ApiError, idempotencyKey } from "@/api/client";
 import { useWalletStore } from "@/stores/wallet";
 import { ReelRenderer } from "@/games/slots/ReelRenderer";
+import EmbeddedGame from "@/components/EmbeddedGame.vue";
 
 const route = useRoute();
 const wallet = useWalletStore();
@@ -34,6 +35,8 @@ let renderer: ReelRenderer | null = null;
 const loading = ref(true);
 const error = ref<string | null>(null);
 const spinning = ref(false);
+/** True when this game ships its own client and is embedded instead of drawn here. */
+const embedded = ref(false);
 
 const bet = ref(100);
 const lastResult = ref<SlotSpinResult | null>(null);
@@ -88,6 +91,20 @@ onMounted(async () => {
     ]);
 
     config.value = gameResult.config;
+
+    /**
+     * Some games ship their own client and are embedded rather than drawn here.
+     *
+     * The shared PixiJS renderer animates a reel strip travelling to a stop, so a game with
+     * weighted reels has nothing for it to animate - and one with a coin feature has symbols
+     * it cannot draw. The config says which kind of game this is, so no extra API field is
+     * needed, and a future game of either sort is handled without touching this page.
+     */
+    if (!gameResult.config.reelStrips) {
+      embedded.value = true;
+      loading.value = false;
+      return;
+    }
 
     // Default to a bet the player can actually afford: the mid-ladder level if possible.
     const affordable = gameResult.config.betLevels.filter((level) =>
@@ -233,9 +250,12 @@ function adjustBet(direction: 1 | -1): void {
         <div>
           <h1>{{ config.name }}</h1>
           <p class="small">
-            {{ config.paylines.length }} lines &middot; {{ (config.rtpTarget * 100).toFixed(1) }}%
-            target RTP &middot; line bet
-            <span class="chips">{{ formatChips(String(lineBet)) }}</span> LC
+            {{ config.paylines.length }} lines &middot; {{ (config.rtpTarget * 100).toFixed(2) }}%
+            RTP
+            <template v-if="!embedded">
+              &middot; line bet <span class="chips">{{ formatChips(String(lineBet)) }}</span> LC
+            </template>
+            <template v-else> &middot; weighted reels &middot; coin feature </template>
           </p>
         </div>
         <RouterLink to="/slots" class="btn btn-ghost btn-sm">All slots</RouterLink>
@@ -243,223 +263,233 @@ function adjustBet(direction: 1 | -1): void {
 
       <div v-if="error" class="alert alert-error" role="alert">{{ error }}</div>
 
-      <!-- Free-spin banner -->
-      <div v-if="freeSpinsRemaining > 0" class="alert alert-warn free-banner">
-        <strong>{{ freeSpinsRemaining }} free spins remaining</strong> at
-        <span class="chips">{{ formatChips(String(bet)) }}</span> LC, with wins multiplied &times;{{
-          config.scatter.freeSpinMultiplier
-        }}. The bet is locked for the run.
-      </div>
+      <!--
+        A game that ships its own client is embedded whole: it brings its own reels, bet
+        selector, paytable and autoplay, so none of this page's controls apply to it. The
+        balance in the header still tracks it, over postMessage.
+      -->
+      <EmbeddedGame v-if="embedded" :game-slug="slug" @exit="$router.push('/slots')" />
 
-      <div class="layout">
-        <!-- Reels + controls -->
-        <section>
-          <div class="machine card">
-            <div ref="canvasHost" class="canvas-host"></div>
+      <template v-else>
+        <!-- Free-spin banner -->
+        <div v-if="freeSpinsRemaining > 0" class="alert alert-warn free-banner">
+          <strong>{{ freeSpinsRemaining }} free spins remaining</strong> at
+          <span class="chips">{{ formatChips(String(bet)) }}</span> LC, with wins multiplied
+          &times;{{ config.scatter.freeSpinMultiplier }}. The bet is locked for the run.
+        </div>
 
-            <!-- Win readout -->
-            <div class="readout" :class="{ 'readout-win': lastWin > 0n }">
-              <template v-if="lastResult && lastWin > 0n">
-                <span class="readout-label">Win</span>
-                <span class="chips chips-win readout-amount">
-                  +{{ formatChips(lastResult.totalWin) }} LC
-                </span>
-                <span v-if="lastResult.scatterWin" class="badge badge-teal">
-                  {{ lastResult.scatterWin.count }} scatters
-                </span>
-                <span v-if="lastResult.freeSpinsAwarded > 0" class="badge badge-gold">
-                  +{{ lastResult.freeSpinsAwarded }} free spins
-                </span>
-              </template>
-              <template v-else-if="lastResult">
-                <span class="readout-label faint">No win on that spin</span>
-              </template>
-              <template v-else>
-                <span class="readout-label faint">Place a bet to spin</span>
-              </template>
-            </div>
+        <div class="layout">
+          <!-- Reels + controls -->
+          <section>
+            <div class="machine card">
+              <div ref="canvasHost" class="canvas-host"></div>
 
-            <!-- Controls -->
-            <div class="controls">
-              <div class="bet">
-                <label>Bet</label>
-                <div class="bet-stepper">
-                  <button
-                    class="btn btn-sm"
-                    :disabled="spinning || freeSpinsRemaining > 0 || bet === config.betLevels[0]"
-                    aria-label="Lower bet"
-                    @click="adjustBet(-1)"
-                  >
-                    &minus;
-                  </button>
-                  <span class="chips bet-value">{{ formatChips(String(bet)) }}</span>
-                  <button
-                    class="btn btn-sm"
-                    :disabled="
-                      spinning ||
-                      freeSpinsRemaining > 0 ||
-                      bet === config.betLevels[config.betLevels.length - 1]
-                    "
-                    aria-label="Raise bet"
-                    @click="adjustBet(1)"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <button
-                class="btn btn-primary spin-btn"
-                :disabled="!canSpin || autoplayRemaining > 0"
-                @click="spin"
-              >
-                <span v-if="spinning" class="spinner"></span>
-                <span v-else-if="freeSpinsRemaining > 0">Free spin</span>
-                <span v-else>Spin</span>
-              </button>
-
-              <button v-if="autoplayRemaining > 0" class="btn btn-danger" @click="stopAutoplay">
-                Stop ({{ autoplayRemaining }})
-              </button>
-              <button v-else class="btn btn-teal" :disabled="!canSpin" @click="startAutoplay">
-                Auto &times;{{ autoSpins }}
-              </button>
-            </div>
-
-            <div v-if="autoStopReason" class="alert alert-info auto-note">
-              {{ autoStopReason }}
-            </div>
-
-            <!-- Autoplay settings and toggles -->
-            <details class="auto-settings">
-              <summary>Autoplay &amp; options</summary>
-              <div class="auto-grid">
-                <div class="field">
-                  <label for="spins">Number of spins</label>
-                  <select id="spins" v-model.number="autoSpins">
-                    <option :value="10">10</option>
-                    <option :value="25">25</option>
-                    <option :value="50">50</option>
-                    <option :value="100">100</option>
-                  </select>
-                </div>
-
-                <label class="toggle">
-                  <input v-model="stopOnFreeSpins" type="checkbox" />
-                  <span>Stop when a bonus is won</span>
-                </label>
-
-                <label class="toggle">
-                  <input v-model="stopOnBigWin" type="checkbox" />
-                  <span>Stop on a win of 20&times; the bet or more</span>
-                </label>
-
-                <label class="toggle">
-                  <input v-model="turbo" type="checkbox" />
-                  <span>Turbo spins</span>
-                </label>
-
-                <label class="toggle">
-                  <input v-model="soundOn" type="checkbox" />
-                  <span>
-                    Sound
-                    <span class="tiny faint">(no audio in this build)</span>
+              <!-- Win readout -->
+              <div class="readout" :class="{ 'readout-win': lastWin > 0n }">
+                <template v-if="lastResult && lastWin > 0n">
+                  <span class="readout-label">Win</span>
+                  <span class="chips chips-win readout-amount">
+                    +{{ formatChips(lastResult.totalWin) }} LC
                   </span>
-                </label>
+                  <span v-if="lastResult.scatterWin" class="badge badge-teal">
+                    {{ lastResult.scatterWin.count }} scatters
+                  </span>
+                  <span v-if="lastResult.freeSpinsAwarded > 0" class="badge badge-gold">
+                    +{{ lastResult.freeSpinsAwarded }} free spins
+                  </span>
+                </template>
+                <template v-else-if="lastResult">
+                  <span class="readout-label faint">No win on that spin</span>
+                </template>
+                <template v-else>
+                  <span class="readout-label faint">Place a bet to spin</span>
+                </template>
               </div>
-            </details>
-          </div>
-        </section>
 
-        <!-- Side: history + paytable -->
-        <aside class="stack">
-          <div class="card card-tight">
-            <div class="row-between">
-              <h3>Recent spins</h3>
-              <span class="tiny faint">{{ history.length }}</span>
+              <!-- Controls -->
+              <div class="controls">
+                <div class="bet">
+                  <label>Bet</label>
+                  <div class="bet-stepper">
+                    <button
+                      class="btn btn-sm"
+                      :disabled="spinning || freeSpinsRemaining > 0 || bet === config.betLevels[0]"
+                      aria-label="Lower bet"
+                      @click="adjustBet(-1)"
+                    >
+                      &minus;
+                    </button>
+                    <span class="chips bet-value">{{ formatChips(String(bet)) }}</span>
+                    <button
+                      class="btn btn-sm"
+                      :disabled="
+                        spinning ||
+                        freeSpinsRemaining > 0 ||
+                        bet === config.betLevels[config.betLevels.length - 1]
+                      "
+                      aria-label="Raise bet"
+                      @click="adjustBet(1)"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  class="btn btn-primary spin-btn"
+                  :disabled="!canSpin || autoplayRemaining > 0"
+                  @click="spin"
+                >
+                  <span v-if="spinning" class="spinner"></span>
+                  <span v-else-if="freeSpinsRemaining > 0">Free spin</span>
+                  <span v-else>Spin</span>
+                </button>
+
+                <button v-if="autoplayRemaining > 0" class="btn btn-danger" @click="stopAutoplay">
+                  Stop ({{ autoplayRemaining }})
+                </button>
+                <button v-else class="btn btn-teal" :disabled="!canSpin" @click="startAutoplay">
+                  Auto &times;{{ autoSpins }}
+                </button>
+              </div>
+
+              <div v-if="autoStopReason" class="alert alert-info auto-note">
+                {{ autoStopReason }}
+              </div>
+
+              <!-- Autoplay settings and toggles -->
+              <details class="auto-settings">
+                <summary>Autoplay &amp; options</summary>
+                <div class="auto-grid">
+                  <div class="field">
+                    <label for="spins">Number of spins</label>
+                    <select id="spins" v-model.number="autoSpins">
+                      <option :value="10">10</option>
+                      <option :value="25">25</option>
+                      <option :value="50">50</option>
+                      <option :value="100">100</option>
+                    </select>
+                  </div>
+
+                  <label class="toggle">
+                    <input v-model="stopOnFreeSpins" type="checkbox" />
+                    <span>Stop when a bonus is won</span>
+                  </label>
+
+                  <label class="toggle">
+                    <input v-model="stopOnBigWin" type="checkbox" />
+                    <span>Stop on a win of 20&times; the bet or more</span>
+                  </label>
+
+                  <label class="toggle">
+                    <input v-model="turbo" type="checkbox" />
+                    <span>Turbo spins</span>
+                  </label>
+
+                  <label class="toggle">
+                    <input v-model="soundOn" type="checkbox" />
+                    <span>
+                      Sound
+                      <span class="tiny faint">(no audio in this build)</span>
+                    </span>
+                  </label>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          <!-- Side: history + paytable -->
+          <aside class="stack">
+            <div class="card card-tight">
+              <div class="row-between">
+                <h3>Recent spins</h3>
+                <span class="tiny faint">{{ history.length }}</span>
+              </div>
+
+              <div v-if="history.length === 0" class="tiny faint">Nothing yet.</div>
+
+              <ul v-else class="history">
+                <li v-for="(round, index) in history" :key="index" class="history-row">
+                  <span class="tiny faint">
+                    {{ round.free ? "Free" : formatChips(round.bet) }}
+                  </span>
+                  <span class="chips tiny" :class="Number(round.win) > 0 ? 'chips-win' : 'faint'">
+                    {{ Number(round.win) > 0 ? `+${formatChips(round.win)}` : "—" }}
+                  </span>
+                </li>
+              </ul>
             </div>
 
-            <div v-if="history.length === 0" class="tiny faint">Nothing yet.</div>
+            <div class="card card-tight">
+              <button class="paytable-toggle" @click="showPaytable = !showPaytable">
+                <h3>Paytable</h3>
+                <span class="faint">{{ showPaytable ? "−" : "+" }}</span>
+              </button>
 
-            <ul v-else class="history">
-              <li v-for="(round, index) in history" :key="index" class="history-row">
-                <span class="tiny faint">
-                  {{ round.free ? "Free" : formatChips(round.bet) }}
-                </span>
-                <span class="chips tiny" :class="Number(round.win) > 0 ? 'chips-win' : 'faint'">
-                  {{ Number(round.win) > 0 ? `+${formatChips(round.win)}` : "—" }}
-                </span>
-              </li>
-            </ul>
-          </div>
+              <template v-if="showPaytable">
+                <p class="tiny faint">
+                  Multiples of the line bet ({{ formatChips(String(lineBet)) }} LC), paid left to
+                  right. Scatters pay on the total bet from anywhere.
+                </p>
 
-          <div class="card card-tight">
-            <button class="paytable-toggle" @click="showPaytable = !showPaytable">
-              <h3>Paytable</h3>
-              <span class="faint">{{ showPaytable ? "−" : "+" }}</span>
-            </button>
+                <table class="table paytable">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th class="right">3</th>
+                      <th class="right">4</th>
+                      <th class="right">5</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="symbol in paySymbols" :key="symbol.id">
+                      <td>
+                        <span class="sym-name">{{ symbol.name }}</span>
+                        <span v-if="symbol.kind === 'wild'" class="badge badge-gold tiny-badge">
+                          Wild
+                        </span>
+                      </td>
+                      <td class="right mono">{{ symbol.pays["3"] ?? "—" }}</td>
+                      <td class="right mono">{{ symbol.pays["4"] ?? "—" }}</td>
+                      <td class="right mono">{{ symbol.pays["5"] ?? "—" }}</td>
+                    </tr>
+                  </tbody>
+                </table>
 
-            <template v-if="showPaytable">
-              <p class="tiny faint">
-                Multiples of the line bet ({{ formatChips(String(lineBet)) }} LC), paid left to
-                right. Scatters pay on the total bet from anywhere.
-              </p>
+                <hr class="divider" />
 
-              <table class="table paytable">
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th class="right">3</th>
-                    <th class="right">4</th>
-                    <th class="right">5</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="symbol in paySymbols" :key="symbol.id">
-                    <td>
-                      <span class="sym-name">{{ symbol.name }}</span>
-                      <span v-if="symbol.kind === 'wild'" class="badge badge-gold tiny-badge">
-                        Wild
-                      </span>
-                    </td>
-                    <td class="right mono">{{ symbol.pays["3"] ?? "—" }}</td>
-                    <td class="right mono">{{ symbol.pays["4"] ?? "—" }}</td>
-                    <td class="right mono">{{ symbol.pays["5"] ?? "—" }}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <hr class="divider" />
-
-              <h4 class="scatter-head">
-                Scatter &mdash;
-                {{ config.symbols.find((s) => s.id === config?.scatter.symbol)?.name }}
-              </h4>
-              <table class="table paytable">
-                <thead>
-                  <tr>
-                    <th>Scatters</th>
-                    <th class="right">Pays</th>
-                    <th class="right">Free spins</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="count in ['3', '4', '5']" :key="count">
-                    <td>{{ count }}</td>
-                    <td class="right mono">
-                      {{ config.scatter.pays[count] ? `${config.scatter.pays[count]}× bet` : "—" }}
-                    </td>
-                    <td class="right mono">{{ config.scatter.freeSpins[count] ?? "—" }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p class="tiny faint">
-                Free-spin wins are multiplied by &times;{{ config.scatter.freeSpinMultiplier }}.
-              </p>
-            </template>
-          </div>
-        </aside>
-      </div>
+                <h4 class="scatter-head">
+                  Scatter &mdash;
+                  {{ config.symbols.find((s) => s.id === config?.scatter.symbol)?.name }}
+                </h4>
+                <table class="table paytable">
+                  <thead>
+                    <tr>
+                      <th>Scatters</th>
+                      <th class="right">Pays</th>
+                      <th class="right">Free spins</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="count in ['3', '4', '5']" :key="count">
+                      <td>{{ count }}</td>
+                      <td class="right mono">
+                        {{
+                          config.scatter.pays[count] ? `${config.scatter.pays[count]}× bet` : "—"
+                        }}
+                      </td>
+                      <td class="right mono">{{ config.scatter.freeSpins[count] ?? "—" }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="tiny faint">
+                  Free-spin wins are multiplied by &times;{{ config.scatter.freeSpinMultiplier }}.
+                </p>
+              </template>
+            </div>
+          </aside>
+        </div>
+      </template>
     </template>
   </div>
 </template>
