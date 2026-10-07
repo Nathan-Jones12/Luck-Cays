@@ -1,0 +1,1539 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>242 Wild Harbour</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Figtree:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --navy: #0a2350;
+        --deep: #061633;
+        --gold: #ffc93c;
+        --gold-hi: #fff1a8;
+        --gold-lo: #b8701a;
+        --coral: #ff4d6d;
+        --lagoon: #22d3ee;
+        --cream: #fff6e0;
+        --display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+        --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: #06122a;
+      }
+      body {
+        font-family: var(--body);
+        color: var(--cream);
+        background: #06122a url("assets/background.jpg") center 65% / cover no-repeat;
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+          env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(
+          180deg,
+          rgba(6, 22, 51, 0.35) 0%,
+          rgba(6, 22, 51, 0) 30%,
+          rgba(6, 22, 51, 0) 60%,
+          rgba(6, 22, 51, 0.75) 100%
+        );
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        background: none;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 3px solid var(--lagoon);
+        outline-offset: 3px;
+        border-radius: 12px;
+      }
+
+      /* top bar */
+      .top {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px 0;
+        gap: 10px;
+        z-index: 3;
+      }
+      .title {
+        font-family: var(--display);
+        font-size: clamp(20px, 3.4vw, 34px);
+        line-height: 1;
+        letter-spacing: 0.5px;
+        background: linear-gradient(
+          180deg,
+          var(--gold-hi) 10%,
+          var(--gold) 50%,
+          var(--gold-lo) 95%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 2px 0 #5a2c00) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+      }
+      .icons {
+        display: flex;
+        gap: 8px;
+      }
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: rgba(6, 22, 51, 0.7);
+        border: 2px solid var(--gold);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+      }
+      .icon-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* reels stage */
+      .stage {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        container-type: size;
+        display: grid;
+        place-items: center;
+        padding: 4px 8px;
+      }
+      .machine {
+        position: relative;
+        width: min(100cqw, 150cqh);
+        aspect-ratio: 1536/1024;
+        filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55));
+      }
+      .panel {
+        position: absolute;
+        left: 8%;
+        top: 12%;
+        width: 84%;
+        height: 76%;
+        border-radius: 8px;
+        background: radial-gradient(
+          ellipse at 50% 40%,
+          rgba(18, 58, 120, 0.92),
+          rgba(6, 22, 51, 0.96)
+        );
+      }
+      .reel {
+        position: absolute;
+        overflow: hidden;
+      }
+      .strip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        will-change: transform;
+      }
+      .cell {
+        position: relative;
+        width: 100%;
+        display: grid;
+        place-items: center;
+      }
+      .cell img {
+        width: 88%;
+        height: 88%;
+        object-fit: contain;
+        transition: opacity 0.25s;
+        pointer-events: none;
+      }
+      .reel.blur .strip {
+        filter: blur(2px);
+      }
+      .coin-val {
+        position: absolute;
+        left: 50%;
+        bottom: 9%;
+        transform: translateX(-50%);
+        font-family: var(--display);
+        font-size: clamp(10px, 2.1cqw, 26px);
+        color: var(--cream);
+        white-space: nowrap;
+        background: var(--navy);
+        border: 2px solid var(--gold);
+        border-radius: 99px;
+        padding: 0.05em 0.55em;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      }
+      .cell.dim img,
+      .cell.dim .coin-val {
+        opacity: 0.35;
+      }
+      .cell.win img {
+        animation: pop 0.9s ease-in-out infinite;
+      }
+      @keyframes pop {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 0 rgba(255, 201, 60, 0));
+        }
+        50% {
+          transform: scale(1.1);
+          filter: drop-shadow(0 0 14px rgba(255, 214, 90, 0.95));
+        }
+      }
+      .frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .lines {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 3;
+      }
+      .lines polyline {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .fs-banner {
+        position: absolute;
+        left: 50%;
+        top: 1%;
+        transform: translateX(-50%);
+        z-index: 4;
+        display: none;
+        font-family: var(--display);
+        font-size: clamp(14px, 2.6cqw, 28px);
+        white-space: nowrap;
+        background: linear-gradient(180deg, #ff6b84, #c81e45);
+        border: 3px solid var(--gold);
+        border-radius: 99px;
+        padding: 0.15em 0.9em;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      }
+      .fs-on .fs-banner {
+        display: block;
+      }
+
+      /* control deck */
+      .deck {
+        position: relative;
+        z-index: 3;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px 12px;
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .pod {
+        background: rgba(6, 22, 51, 0.82);
+        border: 2px solid rgba(255, 201, 60, 0.65);
+        border-radius: 16px;
+        padding: 6px 14px;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.12),
+          0 4px 12px rgba(0, 0, 0, 0.4);
+        min-width: 0;
+      }
+      .pod small {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #a9c4ee;
+      }
+      .pod b {
+        display: block;
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: clamp(17px, 2.4vw, 24px);
+        color: var(--cream);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .left,
+      .right {
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+        min-width: 0;
+      }
+      .right {
+        justify-content: flex-end;
+      }
+      .left .pod,
+      .right .pod {
+        flex: 1;
+        max-width: 220px;
+      }
+      .bet {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .bet .pod {
+        flex: 1;
+        text-align: center;
+        padding: 6px 6px;
+      }
+      .step {
+        width: 38px;
+        height: 38px;
+        flex: none;
+        border-radius: 50%;
+        font-family: var(--display);
+        font-size: 24px;
+        line-height: 1;
+        background: linear-gradient(180deg, var(--gold-hi), var(--gold) 45%, var(--gold-lo));
+        color: var(--navy);
+        box-shadow:
+          0 3px 0 #6b3b05,
+          0 5px 10px rgba(0, 0, 0, 0.4);
+      }
+      .step:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 #6b3b05;
+      }
+      .step:disabled,
+      .auto:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .win-pod b {
+        color: var(--gold);
+      }
+      .win-pod.flash {
+        animation: flash 0.6s ease 3;
+      }
+      @keyframes flash {
+        50% {
+          border-color: var(--gold);
+          box-shadow: 0 0 18px rgba(255, 201, 60, 0.8);
+        }
+      }
+
+      /* the spin button: a riveted gold coin */
+      .spin {
+        position: relative;
+        width: clamp(78px, 11vw, 108px);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 35%, #1d4f9c, var(--navy) 58%, var(--deep));
+        border: clamp(6px, 0.9vw, 9px) solid var(--gold);
+        box-shadow:
+          0 0 0 3px var(--gold-lo),
+          0 0 0 6px rgba(255, 241, 168, 0.5),
+          0 6px 0 #6b3b05,
+          0 12px 24px rgba(0, 0, 0, 0.55);
+        display: grid;
+        place-items: center;
+        transition: transform 0.1s;
+      }
+      .spin::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 50% 3%, var(--gold-hi) 0 3%, transparent 3.5%),
+          radial-gradient(circle at 97% 50%, var(--gold-hi) 0 3%, transparent 3.5%),
+          radial-gradient(circle at 50% 97%, var(--gold-hi) 0 3%, transparent 3.5%),
+          radial-gradient(circle at 3% 50%, var(--gold-hi) 0 3%, transparent 3.5%);
+      }
+      .spin svg {
+        width: 52%;
+        height: 52%;
+        transition: transform 0.4s;
+      }
+      .spin:active {
+        transform: translateY(3px);
+      }
+      .spin.busy svg {
+        animation: turn 0.6s linear infinite;
+      }
+      @keyframes turn {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spin-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+      .auto {
+        font-family: var(--display);
+        font-size: 14px;
+        padding: 3px 12px;
+        border-radius: 99px;
+        background: rgba(6, 22, 51, 0.82);
+        border: 2px solid var(--gold);
+        white-space: nowrap;
+      }
+      .auto[aria-pressed="true"] {
+        background: var(--coral);
+      }
+
+      /* overlays */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        place-items: center;
+        padding: 16px;
+        background: rgba(4, 12, 30, 0.72);
+        backdrop-filter: blur(3px);
+      }
+      .overlay.show {
+        display: grid;
+      }
+      .bigwin {
+        text-align: center;
+        cursor: pointer;
+      }
+      .bigwin h2 {
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: clamp(44px, 11vw, 110px);
+        line-height: 1;
+        background: linear-gradient(
+          180deg,
+          var(--gold-hi) 15%,
+          var(--gold) 50%,
+          var(--gold-lo) 90%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 4px 0 #5a2c00) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+        animation: zoom 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+      }
+      .bigwin p {
+        font-family: var(--display);
+        font-size: clamp(30px, 7vw, 64px);
+        color: var(--cream);
+        margin-top: 8px;
+        text-shadow:
+          0 3px 0 var(--navy),
+          0 6px 14px rgba(0, 0, 0, 0.6);
+      }
+      .bigwin img {
+        width: clamp(120px, 24vw, 220px);
+        margin-bottom: 8px;
+        animation: zoom 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+      }
+      .bigwin small {
+        display: block;
+        margin-top: 14px;
+        font-size: 14px;
+        color: #cfe0ff;
+      }
+      @keyframes zoom {
+        from {
+          transform: scale(0.3);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .sheet {
+        background: linear-gradient(180deg, #12397a, var(--deep));
+        border: 3px solid var(--gold);
+        border-radius: 20px;
+        width: min(640px, 100%);
+        max-height: 100%;
+        overflow: auto;
+        padding: 20px 20px 24px;
+        position: relative;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      }
+      .sheet h2 {
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: 30px;
+        color: var(--gold);
+        margin-bottom: 4px;
+      }
+      .sheet h3 {
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: 20px;
+        color: var(--gold);
+        margin: 18px 0 8px;
+      }
+      .sheet p {
+        font-size: 15px;
+        line-height: 1.55;
+        color: #dbe7ff;
+        max-width: 62ch;
+      }
+      .sheet p + p {
+        margin-top: 8px;
+      }
+      .sheet .close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+      }
+      .pays {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .pay {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 8px;
+      }
+      .pay img {
+        width: 56px;
+        height: 56px;
+        object-fit: contain;
+        flex: none;
+      }
+      .pay div {
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .pay b {
+        font-family: var(--display);
+        font-weight: 400;
+        color: var(--gold);
+        margin-right: 4px;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 150px;
+        transform: translateX(-50%);
+        z-index: 30;
+        max-width: 90vw;
+        background: var(--coral);
+        color: #fff;
+        font-weight: 700;
+        padding: 10px 16px;
+        border-radius: 12px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+        display: none;
+        text-align: center;
+      }
+      .toast.show {
+        display: block;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+
+      /* phones / narrow iframes */
+      @media (max-width: 640px) {
+        .deck {
+          grid-template-columns: 1fr 1fr;
+          grid-template-areas: "bal win" "bet spin";
+          gap: 8px;
+        }
+        .left {
+          display: contents;
+        }
+        .right {
+          display: contents;
+        }
+        .bal {
+          grid-area: bal;
+        }
+        .win-pod {
+          grid-area: win;
+        }
+        .bet {
+          grid-area: bet;
+        }
+        .spin-wrap {
+          grid-area: spin;
+        }
+        .left .pod,
+        .right .pod {
+          max-width: none;
+        }
+        .spin-wrap {
+          flex-direction: row;
+          justify-content: center;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .cell.win img,
+        .spin.busy svg,
+        .bigwin h2,
+        .bigwin img {
+          animation: none;
+        }
+        .cell.win img {
+          filter: drop-shadow(0 0 10px rgba(255, 214, 90, 0.9));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="title" id="gameTitle">242 Wild Harbour</div>
+      <div class="icons">
+        <button class="icon-btn" id="soundBtn" aria-label="Sound on" aria-pressed="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ffc93c"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 9v6h4l5 4V5L8 9H4z" fill="#ffc93c" />
+            <path id="waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" />
+          </svg>
+        </button>
+        <button class="icon-btn" id="infoBtn" aria-label="Paytable and rules">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ffc93c"
+            stroke-width="2.4"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="9.5" />
+            <path d="M12 11v6M12 7.2v.1" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div class="machine" id="machine">
+        <div class="panel"></div>
+        <div id="reels"></div>
+        <img class="frame" src="assets/frame.webp" alt="" />
+        <svg class="lines" id="lines" viewBox="0 0 1536 1024" preserveAspectRatio="none"></svg>
+        <div class="fs-banner" id="fsBanner">Free spins: <span id="fsLeft">0</span> · wins x2</div>
+      </div>
+    </main>
+
+    <footer class="deck">
+      <div class="left">
+        <div class="pod bal"><small>Balance</small><b id="balance">0</b></div>
+        <div class="bet">
+          <button class="step" id="betDown" aria-label="Lower bet">–</button>
+          <div class="pod"><small>Bet</small><b id="bet">0</b></div>
+          <button class="step" id="betUp" aria-label="Raise bet">+</button>
+        </div>
+      </div>
+      <div class="spin-wrap">
+        <button class="spin" id="spinBtn" aria-label="Spin">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ffc93c"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 12a8 8 0 1 1-2.6-5.9" />
+            <path d="M20 4v5h-5" />
+          </svg>
+        </button>
+        <button class="auto" id="autoBtn" aria-pressed="false">Auto</button>
+      </div>
+      <div class="right">
+        <div class="pod win-pod" id="winPod"><small>Win</small><b id="win">0</b></div>
+      </div>
+    </footer>
+
+    <div class="overlay" id="bigOverlay"><div class="bigwin" id="bigBox"></div></div>
+    <div class="overlay" id="infoOverlay" role="dialog" aria-modal="true" aria-label="Paytable">
+      <div class="sheet">
+        <button class="icon-btn close" id="closeInfo" aria-label="Close paytable">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ffc93c"
+            stroke-width="2.6"
+            stroke-linecap="round"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+        <h2>Paytable</h2>
+        <p>Payouts shown for your current bet.</p>
+        <div class="pays" id="pays"></div>
+        <h3>How it works</h3>
+        <p>
+          20 lines pay left to right, starting on the first reel. Only the highest win on each line
+          pays.
+        </p>
+        <p>
+          The 242 Wild lands on reels 2 to 5 and stands in for every symbol except Scatter and Coin.
+        </p>
+        <p>
+          3, 4 or 5 Scatters anywhere pay 2x, 10x or 50x your bet and award 8, 10 or 12 free spins.
+          Every win in free spins is doubled, and free spins can retrigger.
+        </p>
+        <p>Each 242 Coin carries a value. Land 5 or more anywhere and you collect all of them.</p>
+        <p id="rtpNote"></p>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="alert"></div>
+    <div class="sr" aria-live="polite" id="announce"></div>
+    <script>
+      /* =========================================================
+   Luck-Cays build.
+
+   This client decides nothing. Every outcome and every win amount comes from the server,
+   which holds the chips; the browser renders what it is told.
+
+   The original's demo mode - where this file picked its own results - has been REMOVED
+   rather than left behind a flag. A switch that turns a real-money game into a cheatable
+   one is not something anybody should be one typo away from.
+
+   Chips are whole integers. The original used floating-point currency (0.2, 999.5), which
+   is exactly what the Luck-Cays money path excludes: there is no fifth of a chip.
+   ========================================================= */
+      const CONFIG = {
+        GAME_TITLE: "242 Wild Harbour",
+        GAME_SLUG: "wild-harbour",
+        // Replaced by the server's real bet levels on load; a fallback for the moment before.
+        BET_STEPS: [20, 40, 100, 200, 400, 1000, 2000, 5000],
+        DEFAULT_BET_INDEX: 2,
+        AUTOPLAY_ENABLED: true,
+        // Same-origin in development via the Vite proxy; an absolute API origin in production.
+        API_BASE: "/api",
+        // The protocol the Luck-Cays embed loader speaks. See docs/embedding.md.
+        PROTOCOL: "lc-embed/1",
+      };
+
+      /* The game-scoped session, redeemed from the one-shot launch ticket in the URL. Held in
+   memory only, and it can spin this one game and nothing else - no account powers at all. */
+      let SESSION = null;
+
+      /* The embedding page, learned from the referrer, which is the only way to read it from
+   inside an iframe. postMessage is never sent to "*". */
+      const HOST_ORIGIN = (() => {
+        if (window.parent === window) return null;
+        try {
+          return document.referrer ? new URL(document.referrer).origin : null;
+        } catch (e) {
+          return null;
+        }
+      })();
+
+      /* ===================== PRESENTATION DATA =====================
+   The server holds the real maths. What is left here is only what the renderer needs to DRAW
+   a result: symbol names for the paytable and alt text, and the payline shapes for the win
+   animation.
+
+   The original's randomGrid(), evaluate(), WEIGHTS and paytable figures lived here and have
+   been deleted. A second copy of the game rules in the client is exactly how a figure on
+   screen ends up disagreeing with the balance the server actually moved - and in the
+   original, even "server mode" re-graded the server's grid locally.
+
+   Paytable numbers are fetched from the server's game config on load, so the paytable screen
+   cannot drift from what a player is really paid.
+   ============================================================= */
+      const SYMBOLS = {
+        H: { name: "Hibiscus" },
+        P: { name: "Golden palm" },
+        F: { name: "Flamingo" },
+        C: { name: "Conch" },
+        M: { name: "Blue marlin" },
+        W: { name: "242 Wild" },
+        S: { name: "Scatter" },
+        G: { name: "242 Coin" },
+      };
+
+      /* Filled from the server's game config by loadGameConfig(). */
+      let SCATTER_PAYS = {};
+      let SCATTER_SPINS = {};
+      let COINS_NEEDED = 5;
+      let FREE_SPIN_MULT = 2;
+
+      /* 20 paylines, each number = row (0 top, 1 middle, 2 bottom) on reels 1-5.
+   Presentation only: the server decides which lines paid; this says where to draw them. */
+      const LINES = [
+        [1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0],
+        [2, 2, 2, 2, 2],
+        [0, 1, 2, 1, 0],
+        [2, 1, 0, 1, 2],
+        [0, 0, 1, 2, 2],
+        [2, 2, 1, 0, 0],
+        [1, 0, 0, 0, 1],
+        [1, 2, 2, 2, 1],
+        [1, 0, 1, 2, 1],
+        [1, 2, 1, 0, 1],
+        [0, 1, 0, 1, 0],
+        [2, 1, 2, 1, 2],
+        [0, 1, 1, 1, 0],
+        [2, 1, 1, 1, 2],
+        [1, 1, 0, 1, 1],
+        [1, 1, 2, 1, 1],
+        [0, 0, 2, 0, 0],
+        [2, 2, 0, 2, 2],
+        [0, 2, 0, 2, 0],
+      ];
+
+      /* ---------- the server is the authority ---------- */
+
+      async function apiCall(path, options) {
+        const opts = options || {};
+        const res = await fetch(CONFIG.API_BASE + path, {
+          method: opts.method || "GET",
+          headers: Object.assign(
+            opts.body === undefined ? {} : { "Content-Type": "application/json" },
+            SESSION ? { Authorization: "Bearer " + SESSION.sessionToken } : {},
+          ),
+          body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+          // No cookies. The game authenticates with its scoped bearer token and must not be able
+          // to ride the player's own session.
+          credentials: "omit",
+        });
+
+        const text = await res.text();
+        const payload = text ? JSON.parse(text) : null;
+        if (!res.ok) {
+          const error = payload && payload.error;
+          const err = new Error((error && error.message) || "Request failed");
+          err.code = error && error.code;
+          throw err;
+        }
+        return payload;
+      }
+
+      /** Redeem a one-shot launch ticket for a game session. Works once per ticket. */
+      async function redeemTicket(token) {
+        SESSION = null;
+        const session = await apiCall("/launch/exchange", { method: "POST", body: { token } });
+        SESSION = session;
+        state.balance = Number(session.balance);
+        return session;
+      }
+
+      /** Pull the real paytable and bet levels, so nothing on screen is a local guess. */
+      async function loadGameConfig() {
+        const loaded = await apiCall("/slots/" + CONFIG.GAME_SLUG);
+        const config = loaded.config;
+
+        for (const symbol of config.symbols) {
+          if (SYMBOLS[symbol.id] && config.paytable[symbol.id]) {
+            SYMBOLS[symbol.id].pays = config.paytable[symbol.id];
+          }
+        }
+
+        SCATTER_PAYS = config.scatter.pays;
+        SCATTER_SPINS = config.scatter.freeSpins;
+        FREE_SPIN_MULT = config.scatter.freeSpinMultiplier;
+        COINS_NEEDED = config.coin ? config.coin.needed : 5;
+
+        CONFIG.BET_STEPS = config.betLevels;
+        CONFIG.DEFAULT_BET_INDEX = Math.min(2, config.betLevels.length - 1);
+        state.betIndex = CONFIG.DEFAULT_BET_INDEX;
+
+        return config;
+      }
+
+      /**
+       * Turn the server's result into the shape this renderer already understands.
+       *
+       * The server sends a symbol grid plus a parallel matrix of coin values; this client wants one
+       * array of cells, each `{ s }` or `{ s, v }`. Win amounts are taken straight from the
+       * response and never recomputed.
+       */
+      function adaptResult(response) {
+        const grid = response.grid.map((column, reel) =>
+          column.map((symbol, row) => {
+            const value = response.coinValues ? response.coinValues[reel][row] : null;
+            return value === null || value === undefined ? { s: symbol } : { s: symbol, v: value };
+          }),
+        );
+
+        const wins = [];
+
+        for (const win of response.lineWins) {
+          wins.push({
+            type: "line",
+            line: win.line,
+            symbol: win.symbol,
+            count: win.count,
+            cells: win.cells,
+            amount: Number(win.amount),
+          });
+        }
+        if (response.scatterWin) {
+          wins.push({
+            type: "scatter",
+            symbol: response.scatterWin.symbol,
+            count: response.scatterWin.count,
+            cells: response.scatterWin.cells,
+            amount: Number(response.scatterWin.amount),
+          });
+        }
+        if (response.coinWin) {
+          wins.push({
+            type: "coins",
+            symbol: response.coinWin.symbol,
+            count: response.coinWin.count,
+            cells: response.coinWin.coins.map((c) => c.cell),
+            amount: Number(response.coinWin.amount),
+          });
+        }
+
+        return {
+          grid,
+          result: { wins, total: Number(response.totalWin), freeSpins: response.freeSpinsAwarded },
+        };
+      }
+
+      /* ===================== GAME ENGINE ===================== */
+      const IMG = {
+        H: "hibiscus",
+        P: "palm",
+        F: "flamingo",
+        C: "conch",
+        M: "marlin",
+        W: "wild",
+        S: "scatter",
+        G: "coin",
+      };
+      const $ = (id) => document.getElementById(id);
+      // frame openings measured from frame art (1536 x 1024)
+      const REEL_X = [
+        [128, 398],
+        [420, 632],
+        [656, 880],
+        [904, 1116],
+        [1138, 1408],
+      ];
+      const REEL_TOP = 129,
+        REEL_BOT = 890,
+        FW = 1536,
+        FH = 1024;
+      const ROW_H = (REEL_BOT - REEL_TOP) / 3;
+
+      const state = {
+        // Starts at zero and is only ever set from a server response. The original started from a
+        // local START_BALANCE, which is the demo behaviour this build removes.
+        balance: 0,
+        betIndex: CONFIG.DEFAULT_BET_INDEX,
+        spinning: false,
+        auto: false,
+        freeSpins: 0,
+        fsTotalWin: 0,
+        grid: null,
+        anims: [],
+        sound: true,
+        lineTimer: null,
+        hurry: false,
+      };
+
+      /* Chips are whole numbers, grouped for reading. No currency symbol and no decimals: these are
+   Luck-Cays Chips, which have no cash value. The original formatted USD with Intl. */
+      const fmt = (n) => Math.round(Number(n)).toLocaleString("en-US") + " LC";
+      const bet = () => CONFIG.BET_STEPS[state.betIndex];
+
+      /* ---------- talk to the embedding page ---------- */
+      function tell(type, data) {
+        if (!HOST_ORIGIN) return;
+        try {
+          window.parent.postMessage(
+            Object.assign({ protocol: CONFIG.PROTOCOL, type }, data),
+            HOST_ORIGIN,
+          );
+        } catch (e) {
+          /* a closed or navigated host is not worth surfacing */
+        }
+      }
+
+      /* The host may mute us and may hand us a fresh session. It may NOT set a balance.
+   The original accepted a `setBalance` message, and honouring that would let every embedding
+   page rewrite the player's chips - the server owns the balance, full stop. */
+      window.addEventListener("message", (e) => {
+        if (HOST_ORIGIN && e.origin !== HOST_ORIGIN) return;
+        const d = e.data || {};
+        if (d.protocol !== CONFIG.PROTOCOL) return;
+
+        if (d.type === "mute") {
+          state.sound = !d.muted;
+          return;
+        }
+
+        if (d.type === "resume" && typeof d.token === "string") {
+          redeemTicket(d.token)
+            .then(() => {
+              renderNums();
+              tell("balance", { balance: String(state.balance) });
+            })
+            .catch((err) =>
+              tell("error", { code: "RESUME_FAILED", message: String(err.message || err) }),
+            );
+        }
+      });
+
+      /* ---------- sound (made in code, no files needed) ---------- */
+      let ac;
+      function tone(freq, dur, type = "sine", vol = 0.15, delay = 0) {
+        if (!state.sound) return;
+        try {
+          ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+          const t = ac.currentTime + delay,
+            o = ac.createOscillator(),
+            g = ac.createGain();
+          o.type = type;
+          o.frequency.setValueAtTime(freq, t);
+          g.gain.setValueAtTime(vol, t);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          o.connect(g).connect(ac.destination);
+          o.start(t);
+          o.stop(t + dur);
+        } catch (e) {}
+      }
+      const sfx = {
+        stop: () => {
+          tone(140, 0.12, "triangle", 0.25);
+          tone(70, 0.15, "sine", 0.2);
+        },
+        win: () =>
+          [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, "triangle", 0.12, i * 0.08)),
+        big: () =>
+          [392, 523, 659, 784, 1047, 1319].forEach((f, i) =>
+            tone(f, 0.4, "square", 0.07, i * 0.11),
+          ),
+        scatter: () => [880, 1175, 1568].forEach((f, i) => tone(f, 0.3, "sine", 0.15, i * 0.12)),
+      };
+
+      /* ---------- build reels ---------- */
+      const reelEls = [];
+      function cellHTML(c, n) {
+        return `<div class="cell" style="height:${100 / n}%"><img src="assets/${IMG[c.s]}.webp" alt="${SYMBOLS[c.s].name}" draggable="false">${c.s === "G" ? `<span class="coin-val">${fmt(c.v * bet())}</span>` : ""}</div>`;
+      }
+      function setStrip(r, cells) {
+        // cells[0] is a hidden spare above the window
+        const strip = reelEls[r].strip,
+          n = cells.length;
+        strip.style.height = (n / 3) * 100 + "%";
+        strip.innerHTML = cells.map((c) => cellHTML(c, n)).join("");
+        strip.style.transform = `translateY(${-100 / n}%)`;
+      }
+      /* Filler symbols for the blur that scrolls past while a reel is spinning, and for the grid
+   shown before the first spin. Purely cosmetic - nothing here is an outcome, so an unweighted
+   Math.random pick is fine and the real weights are deliberately not replicated in the client.
+
+   Coins and scatters are excluded on purpose: a coin flickering past would need a face value,
+   and inventing one in the browser is exactly the kind of fake figure this build removes. */
+      const FILLER_SYMBOLS = ["H", "P", "F", "C", "M"];
+      function randomCell() {
+        return { s: FILLER_SYMBOLS[Math.floor(Math.random() * FILLER_SYMBOLS.length)] };
+      }
+      function fillerGrid() {
+        return Array.from({ length: 5 }, () => Array.from({ length: 3 }, () => randomCell()));
+      }
+      function buildReels() {
+        const wrap = $("reels");
+        REEL_X.forEach(([x0, x1], r) => {
+          const el = document.createElement("div");
+          el.className = "reel";
+          Object.assign(el.style, {
+            left: (x0 / FW) * 100 + "%",
+            width: ((x1 - x0) / FW) * 100 + "%",
+            top: (REEL_TOP / FH) * 100 + "%",
+            height: ((REEL_BOT - REEL_TOP) / FH) * 100 + "%",
+          });
+          const strip = document.createElement("div");
+          strip.className = "strip";
+          el.appendChild(strip);
+          wrap.appendChild(el);
+          reelEls.push({ el, strip });
+        });
+        state.grid = fillerGrid();
+        state.grid.forEach((col, r) => setStrip(r, [randomCell(), ...col]));
+      }
+      function refreshCoinLabels() {
+        if (state.grid && !state.spinning)
+          state.grid.forEach((col, r) => setStrip(r, [randomCell(), ...col]));
+      }
+
+      /* ---------- ui numbers ---------- */
+      function renderNums() {
+        $("balance").textContent = fmt(state.balance);
+        $("bet").textContent = fmt(bet());
+        const lock = state.spinning || state.freeSpins > 0 || state.auto;
+        $("betDown").disabled = lock || state.betIndex === 0;
+        $("betUp").disabled = lock || state.betIndex === CONFIG.BET_STEPS.length - 1;
+        $("fsLeft").textContent = state.freeSpins;
+        document.body.classList.toggle("fs-on", state.freeSpins > 0);
+      }
+      function setWin(n) {
+        $("win").textContent = fmt(n);
+      }
+      function toast(msg) {
+        const t = $("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        clearTimeout(t._h);
+        t._h = setTimeout(() => t.classList.remove("show"), 3200);
+      }
+      function announce(msg) {
+        $("announce").textContent = msg;
+      }
+
+      /* ---------- win highlight ---------- */
+      function clearWins() {
+        clearInterval(state.lineTimer);
+        state.lineTimer = null;
+        $("lines").innerHTML = "";
+        document.querySelectorAll(".cell").forEach((c) => c.classList.remove("win", "dim"));
+      }
+      function cellEl(reel, row) {
+        return reelEls[reel].strip.children[row + 1];
+      }
+      function linePoints(li) {
+        return LINES[li].map(
+          (row, r) => `${(REEL_X[r][0] + REEL_X[r][1]) / 2},${REEL_TOP + ROW_H * (row + 0.5)}`,
+        );
+      }
+      function drawWins(wins) {
+        const svg = $("lines");
+        const lineWins = wins.filter((w) => w.type === "line");
+        const paint = (list) => {
+          document.querySelectorAll(".cell").forEach((c) => {
+            c.classList.add("dim");
+            c.classList.remove("win");
+          });
+          list.forEach((w) =>
+            w.cells.forEach(([r, row]) => {
+              const c = cellEl(r, row);
+              c.classList.remove("dim");
+              c.classList.add("win");
+            }),
+          );
+          svg.innerHTML = list
+            .filter((w) => w.type === "line")
+            .map((w) => {
+              const pts = linePoints(w.line).join(" ");
+              return `<polyline points="${pts}" stroke="rgba(90,40,0,.8)" stroke-width="20"/><polyline points="${pts}" stroke="#ffc93c" stroke-width="10"/><polyline points="${pts}" stroke="#fff1a8" stroke-width="3"/>`;
+            })
+            .join("");
+        };
+        paint(wins);
+        if (wins.length > 1) {
+          let i = -1;
+          state.lineTimer = setInterval(() => {
+            i = (i + 1) % wins.length;
+            paint([wins[i]]);
+            const w = wins[i];
+            if (w.type === "line")
+              announce(
+                `Line ${w.line + 1}: ${w.count} ${SYMBOLS[w.symbol].name}, ${fmt(w.amount)}`,
+              );
+          }, 1500);
+        }
+      }
+
+      /* ---------- big win ---------- */
+      function showBig(amount, label, img) {
+        return new Promise((res) => {
+          const ov = $("bigOverlay"),
+            box = $("bigBox");
+          box.innerHTML = `${img ? `<img src="assets/${img}.webp" alt="">` : ""}<h2>${label}</h2>${amount === null ? "" : `<p id="bigAmt">${fmt(0)}</p>`}<small>Tap to continue</small>`;
+          ov.classList.add("show");
+          sfx.big();
+          const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+          const t0 = performance.now(),
+            dur = reduce ? 1 : 2200;
+          let done = false;
+          const step = (now) => {
+            if (amount === null) return;
+            const p = Math.min(1, (now - t0) / dur);
+            $("bigAmt").textContent = fmt(amount * (1 - Math.pow(1 - p, 3)));
+            if (p < 1 && !done) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+          const close = () => {
+            if (done) return;
+            done = true;
+            if (amount !== null) $("bigAmt").textContent = fmt(amount);
+            setTimeout(() => {
+              ov.classList.remove("show");
+              ov.onclick = null;
+              res();
+            }, 250);
+          };
+          ov.onclick = close;
+          setTimeout(close, state.auto || state.freeSpins > 0 ? 3500 : 6000);
+        });
+      }
+
+      /* ---------- get a result from the server ---------- */
+
+      /**
+       * Ask the server for a spin.
+       *
+       * The server debits the bet, picks the outcome, grades the wins, credits them and records the
+       * round - all in one transaction - and only then do the reels move. There is no local
+       * fallback: a client that can produce its own results is a client that can be cheated.
+       *
+       * Note `isFree` is not sent. Whether this spin is a free one is the server's business: it
+       * holds the free-spin count, so a client claiming a free spin would be claiming a free bet.
+       */
+      async function requestSpin(totalBet, isFree) {
+        if (!SESSION) throw new Error("This game has no session. Reopen it from the lobby.");
+
+        const response = await apiCall("/slots/spin", {
+          method: "POST",
+          body: {
+            gameSlug: CONFIG.GAME_SLUG,
+            bet: String(totalBet),
+            // One key per attempt, so a dropped response cannot cost a spin on retry.
+            idempotencyKey:
+              "wh-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12),
+          },
+        });
+
+        state.balance = Number(response.balanceAfter);
+        state.freeSpins = response.freeSpinsRemaining;
+
+        tell("balance", { balance: response.balanceAfter });
+        tell("round", {
+          bet: response.bet,
+          win: response.totalWin,
+          freeSpinsAwarded: response.freeSpinsAwarded,
+        });
+
+        return adaptResult(response);
+      }
+
+      /* ---------- spin ---------- */
+      function animateReels(grid) {
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        state.hurry = false;
+        return Promise.all(
+          grid.map(
+            (col, r) =>
+              new Promise((res) => {
+                const filler = 14 + r * 5;
+                const old = state.grid[r];
+                const cells = [randomCell(), ...col];
+                for (let i = 0; i < filler; i++) cells.push(randomCell());
+                cells.push(...old);
+                const n = cells.length;
+                setStrip(r, cells);
+                const strip = reelEls[r].strip,
+                  el = reelEls[r].el;
+                const from = (-(n - 3) / n) * 100,
+                  to = -100 / n;
+                const dur = reduce ? 200 + r * 80 : 900 + r * 260;
+                el.classList.add("blur");
+                const a = strip.animate(
+                  [{ transform: `translateY(${from}%)` }, { transform: `translateY(${to}%)` }],
+                  { duration: dur, easing: "cubic-bezier(.3,.05,.25,1.08)", fill: "forwards" },
+                );
+                state.anims.push(a);
+                const unblur = setTimeout(() => el.classList.remove("blur"), dur - 280);
+                a.onfinish = () => {
+                  clearTimeout(unblur);
+                  el.classList.remove("blur");
+                  setStrip(r, [cells[0], ...col]);
+                  a.cancel();
+                  sfx.stop();
+                  if (col.some((c) => c.s === "S")) sfx.scatter();
+                  res();
+                };
+                if (state.hurry) a.updatePlaybackRate(5);
+              }),
+          ),
+        );
+      }
+      function hurryUp() {
+        state.hurry = true;
+        state.anims.forEach((a) => {
+          try {
+            a.updatePlaybackRate(5);
+          } catch (e) {}
+        });
+      }
+
+      async function spin() {
+        if (state.spinning) {
+          hurryUp();
+          return;
+        }
+        const isFree = state.freeSpins > 0;
+        if (!isFree && state.balance < bet()) {
+          stopAuto();
+          toast("Not enough balance for this bet. Lower your bet to keep playing.");
+          return;
+        }
+        clearWins();
+        setWin(0);
+        $("winPod").classList.remove("flash");
+        state.spinning = true;
+        $("spinBtn").classList.add("busy");
+        if (isFree) state.freeSpins--;
+        renderNums();
+        let out;
+        try {
+          out = await requestSpin(bet(), isFree);
+        } catch (e) {
+          state.spinning = false;
+          $("spinBtn").classList.remove("busy");
+          stopAuto();
+          renderNums();
+          toast("Connection problem. Your bet was not placed, try again.");
+          return;
+        }
+        if (!isFree) tell("spinStart", { bet: bet() });
+        state.anims = [];
+        await animateReels(out.grid);
+        state.grid = out.grid;
+        state.anims = [];
+        const { result } = out;
+        renderNums();
+
+        if (result.total > 0) {
+          setWin(result.total);
+          $("winPod").classList.add("flash");
+          drawWins(result.wins);
+          if (isFree) state.fsTotalWin += result.total;
+          const x = result.total / bet();
+          if (x >= 50) await showBig(result.total, "Mega win", "wild");
+          else if (x >= 15) await showBig(result.total, "Big win", "marlin");
+          else sfx.win();
+          announce(`You won ${fmt(result.total)}`);
+        }
+        if (result.freeSpins) {
+          const first = !isFree && state.freeSpins === 0;
+          if (first) state.fsTotalWin = 0;
+          state.freeSpins += result.freeSpins;
+          renderNums();
+          await showBig(null, `${result.freeSpins} free spins`, "scatter");
+        }
+        tell("spinEnd", {
+          bet: isFree ? 0 : bet(),
+          win: result.total,
+          balance: state.balance,
+          freeSpinsLeft: state.freeSpins,
+        });
+
+        state.spinning = false;
+        $("spinBtn").classList.remove("busy");
+        renderNums();
+
+        if (isFree && state.freeSpins === 0) {
+          await wait(900);
+          await showBig(state.fsTotalWin, "Free spins total", "scatter");
+          renderNums();
+        }
+        if (state.freeSpins > 0) {
+          await wait(result.total > 0 ? 1600 : 700);
+          spin();
+          return;
+        }
+        if (state.auto) {
+          await wait(result.total > 0 ? 1500 : 450);
+          if (state.auto) spin();
+        }
+      }
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      function stopAuto() {
+        state.auto = false;
+        $("autoBtn").setAttribute("aria-pressed", "false");
+        $("autoBtn").textContent = "Auto";
+        renderNums();
+      }
+
+      /* ---------- paytable ---------- */
+      function renderPays() {
+        const lb = bet() / LINES.length;
+        const order = ["W", "M", "C", "F", "P", "H"];
+        $("pays").innerHTML =
+          order
+            .map(
+              (s) =>
+                `<div class="pay"><img src="assets/${IMG[s]}.webp" alt=""><div>${[5, 4, 3]
+                  .map((n) => `<div><b>${n}x</b>${fmt(SYMBOLS[s].pays[n] * lb)}</div>`)
+                  .join("")}</div></div>`,
+            )
+            .join("") +
+          `<div class="pay"><img src="assets/scatter.webp" alt=""><div>${[5, 4, 3].map((n) => `<div><b>${n}x</b>${fmt(SCATTER_PAYS[n] * bet())}</div>`).join("")}</div></div>` +
+          `<div class="pay"><img src="assets/coin.webp" alt=""><div><div>${COINS_NEEDED} or more:</div><div>collect all coin values</div></div></div>`;
+        $("rtpNote").textContent = "Play money only. Luck-Cays Chips have no cash value.";
+      }
+
+      /* ---------- wire up ---------- */
+      $("gameTitle").textContent = CONFIG.GAME_TITLE;
+      document.title = CONFIG.GAME_TITLE;
+      if (!CONFIG.AUTOPLAY_ENABLED) $("autoBtn").style.display = "none";
+      buildReels();
+      renderNums();
+      setWin(0);
+
+      /**
+       * Boot: redeem the one-shot launch ticket, then fetch the real paytable.
+       *
+       * Nothing is playable until both land. The spin button is disabled meanwhile, because a spin
+       * without a session would fail at the server and a paytable from a local guess could disagree
+       * with what the player is actually paid.
+       */
+      (async function boot() {
+        const params = new URLSearchParams(location.search);
+        const token = params.get("token");
+
+        $("spinBtn").disabled = true;
+
+        if (!token) {
+          announce("This game was opened without a launch link.");
+          $("rtpNote").textContent = "Open this game from the lobby.";
+          tell("error", { code: "NO_LAUNCH_TOKEN", message: "No launch token in the URL" });
+          return;
+        }
+
+        try {
+          await redeemTicket(token);
+
+          // The ticket is spent, so scrub it from the address bar rather than leave it in the
+          // iframe's history.
+          history.replaceState({}, "", location.pathname);
+
+          const config = await loadGameConfig();
+          if (config.name) {
+            CONFIG.GAME_TITLE = config.name;
+            $("gameTitle").textContent = config.name;
+          }
+
+          // Resume an interrupted free-spin run, which the server tracks, not us.
+          const free = await apiCall("/slots/" + CONFIG.GAME_SLUG + "/free-spins").catch(
+            () => null,
+          );
+          if (free && free.freeSpins) {
+            state.freeSpins = free.freeSpins.remaining;
+            const index = CONFIG.BET_STEPS.indexOf(Number(free.freeSpins.bet));
+            if (index >= 0) state.betIndex = index;
+          }
+
+          renderNums();
+          renderPays();
+          $("spinBtn").disabled = false;
+
+          tell("ready", { gameSlug: CONFIG.GAME_SLUG });
+          tell("balance", { balance: String(state.balance) });
+        } catch (err) {
+          const message = String((err && err.message) || err);
+          announce(message);
+          $("rtpNote").textContent = message;
+          tell("error", { code: (err && err.code) || "LAUNCH_FAILED", message });
+        }
+      })();
+      $("spinBtn").onclick = () => {
+        if (state.auto && !state.spinning) {
+          stopAuto();
+          return;
+        }
+        spin();
+      };
+      $("autoBtn").onclick = () => {
+        if (state.auto) {
+          stopAuto();
+          return;
+        }
+        state.auto = true;
+        $("autoBtn").setAttribute("aria-pressed", "true");
+        $("autoBtn").textContent = "Stop";
+        renderNums();
+        if (!state.spinning && state.freeSpins === 0) spin();
+      };
+      $("betDown").onclick = () => {
+        if (state.betIndex > 0) {
+          state.betIndex--;
+          renderNums();
+          refreshCoinLabels();
+        }
+      };
+      $("betUp").onclick = () => {
+        if (state.betIndex < CONFIG.BET_STEPS.length - 1) {
+          state.betIndex++;
+          renderNums();
+          refreshCoinLabels();
+        }
+      };
+      $("soundBtn").onclick = () => {
+        state.sound = !state.sound;
+        $("soundBtn").setAttribute("aria-pressed", state.sound);
+        $("soundBtn").setAttribute("aria-label", state.sound ? "Sound on" : "Sound off");
+        $("waves").style.display = state.sound ? "" : "none";
+      };
+      $("infoBtn").onclick = () => {
+        renderPays();
+        $("infoOverlay").classList.add("show");
+        $("closeInfo").focus();
+      };
+      $("closeInfo").onclick = () => $("infoOverlay").classList.remove("show");
+      $("infoOverlay").onclick = (e) => {
+        if (e.target.id === "infoOverlay") $("infoOverlay").classList.remove("show");
+      };
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          $("infoOverlay").classList.remove("show");
+          return;
+        }
+        if (
+          e.code === "Space" &&
+          !$("infoOverlay").classList.contains("show") &&
+          document.activeElement.tagName !== "BUTTON"
+        ) {
+          e.preventDefault();
+          spin();
+        }
+      });
+      tell("ready", { balance: state.balance });
+    </script>
+  </body>
+</html>

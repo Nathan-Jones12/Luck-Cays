@@ -1,0 +1,576 @@
+/*
+ * The design system. One file, because a prototype with a dozen stylesheets is harder to
+ * reason about than one with a clear token layer at the top.
+ *
+ * Dark only, deliberately: the whole product is a lobby you sit in, and a light casino
+ * floor looks wrong. Everything below the token block uses the tokens, so a rebrand is an
+ * edit to :root and nothing else.
+ */
+
+:root {
+  /* Surfaces, deepest first. */
+  --bg: #070d14;
+  --surface-1: #0d1620;
+  --surface-2: #131f2c;
+  --surface-3: #1b2b3b;
+  --surface-raised: #223449;
+
+  --border: #23374b;
+  --border-strong: #32506c;
+
+  /* Text. */
+  --text: #e8f0f7;
+  --text-muted: #94a9bd;
+  --text-faint: #5f7589;
+
+  /* Brand: a warm gold against the deep teal, reading as chips on felt. */
+  --gold: #f5c358;
+  --gold-dim: #c89a3c;
+  --gold-glow: rgba(245, 195, 88, 0.22);
+
+  --teal: #2fd4b4;
+  --teal-dim: #1d9f87;
+
+  /* Semantic. */
+  --win: #4ade80;
+  --win-dim: #1f9d52;
+  --loss: #f87171;
+  --loss-dim: #b84343;
+  --warn: #fbbf24;
+  --info: #60a5fa;
+
+  /* Typography. */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* Spacing and shape. */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+
+  --header-height: 60px;
+  --page-max: 1180px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  /* A faint pool of light behind the content, so the page is not a flat black field. */
+  background-image:
+    radial-gradient(1100px 520px at 50% -10%, rgba(47, 212, 180, 0.07), transparent 65%),
+    radial-gradient(760px 420px at 85% 8%, rgba(245, 195, 88, 0.05), transparent 70%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 0.5em;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+}
+h2 {
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+}
+h3 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--teal);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* A visible focus ring everywhere. Removing it would make this unusable by keyboard. */
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------- layout --------------------------------- */
+
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 24px 16px 72px;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.page-head p {
+  margin: 0;
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-cards {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ---------------------------------- surfaces -------------------------------- */
+
+.card {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-tight {
+  padding: 14px;
+}
+
+.card-interactive {
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  border: 0;
+  margin: 14px 0;
+}
+
+/* ---------------------------------- buttons --------------------------------- */
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    background 130ms ease,
+    border-color 130ms ease,
+    transform 90ms ease,
+    opacity 130ms ease;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--gold), var(--gold-dim));
+  border-color: var(--gold-dim);
+  color: #241a05;
+  box-shadow: 0 0 0 0 var(--gold-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffd470, var(--gold));
+  box-shadow: 0 0 0 4px var(--gold-glow);
+}
+
+.btn-teal {
+  background: linear-gradient(180deg, var(--teal), var(--teal-dim));
+  border-color: var(--teal-dim);
+  color: #04231d;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--loss-dim);
+  color: var(--loss);
+}
+
+.btn-sm {
+  padding: 6px 11px;
+  font-size: 0.85rem;
+}
+
+.btn-lg {
+  padding: 13px 26px;
+  font-size: 1.05rem;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ----------------------------------- forms ---------------------------------- */
+
+label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  letter-spacing: 0.01em;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  transition: border-color 130ms ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--teal);
+  outline: none;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--teal);
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field-error {
+  color: var(--loss);
+  font-size: 0.82rem;
+  margin-top: 5px;
+}
+
+.hint {
+  color: var(--text-faint);
+  font-size: 0.82rem;
+  margin-top: 5px;
+}
+
+/* ---------------------------------- chips ----------------------------------- */
+
+/* Chip amounts are tabular so columns of figures line up and do not jitter as they change. */
+.chips {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.chips-gold {
+  color: var(--gold);
+}
+.chips-win {
+  color: var(--win);
+}
+.chips-loss {
+  color: var(--loss);
+}
+
+/* ---------------------------------- badges ---------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.badge-gold {
+  background: rgba(245, 195, 88, 0.14);
+  color: var(--gold);
+  border-color: rgba(245, 195, 88, 0.3);
+}
+
+.badge-teal {
+  background: rgba(47, 212, 180, 0.13);
+  color: var(--teal);
+  border-color: rgba(47, 212, 180, 0.28);
+}
+
+.badge-win {
+  background: rgba(74, 222, 128, 0.13);
+  color: var(--win);
+  border-color: rgba(74, 222, 128, 0.28);
+}
+
+.badge-loss {
+  background: rgba(248, 113, 113, 0.13);
+  color: var(--loss);
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.badge-muted {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+/* ---------------------------------- tables ---------------------------------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th {
+  text-align: left;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(35, 55, 75, 0.5);
+}
+
+.table tbody tr:hover {
+  background: rgba(27, 43, 59, 0.45);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  /* Momentum scrolling on iOS, where a wide table is otherwise unusable. */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------------------------------- utility --------------------------------- */
+
+.muted {
+  color: var(--text-muted);
+}
+.faint {
+  color: var(--text-faint);
+}
+.small {
+  font-size: 0.85rem;
+}
+.tiny {
+  font-size: 0.76rem;
+}
+.bold {
+  font-weight: 650;
+}
+.center {
+  text-align: center;
+}
+.right {
+  text-align: right;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.mono {
+  font-family: var(--font-mono);
+}
+
+.empty {
+  padding: 36px 18px;
+  text-align: center;
+  color: var(--text-faint);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.alert {
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  font-size: 0.9rem;
+  border: 1px solid;
+  margin-bottom: 14px;
+}
+
+.alert-error {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #ffc9c9;
+}
+
+.alert-ok {
+  background: rgba(74, 222, 128, 0.09);
+  border-color: rgba(74, 222, 128, 0.32);
+  color: #c6f6d5;
+}
+
+.alert-info {
+  background: rgba(96, 165, 250, 0.09);
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #cfe2ff;
+}
+
+.alert-warn {
+  background: rgba(251, 191, 36, 0.09);
+  border-color: rgba(251, 191, 36, 0.32);
+  color: #ffeab8;
+}
+
+/* A spinner for anything in flight. */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--text);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect a reduced-motion preference: the only animations that survive are ones that
+   communicate state, and even those stop moving. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ----------------------------------- mobile --------------------------------- */
+
+@media (max-width: 640px) {
+  body {
+    font-size: 14.5px;
+  }
+
+  .page {
+    padding: 16px 16px 84px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: var(--radius);
+  }
+
+  .grid-cards {
+    grid-template-columns: 1fr;
+  }
+}
