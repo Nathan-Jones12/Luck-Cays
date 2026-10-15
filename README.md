@@ -45,3 +45,23 @@ Endpoints the frontend calls (all under `/api`):
 | VIP    | `GET /vip/me`, `/vip/tiers` |
 | Admin  | `GET /admin/slots`, `/admin/audit`; `PATCH /admin/slots/...`; `POST /admin/players/chips`, `/admin/players/status` |
 | Embed  | `POST /launch` (launch tickets for `game.html`) |
+
+## Backend: `server/`
+
+A minimal Express + MySQL server, the starting point for the backend. It listens on
+port 4000, where the dev server already proxies `/api`.
+
+```bash
+cd server
+npm install
+cp .env.example .env          # then fill in DATABASE_URL (and ideally DATABASE_CA_PATH)
+npm run db:create-tables      # creates the tables from db/schema.sql; refuses if any exist
+npm run dev                   # http://localhost:4000/api/health
+```
+
+- `src/db.ts` - the MySQL connection pool, configured only from `server/.env`. Database
+  credentials never go in the frontend: everything there is shipped to the browser.
+- `db/schema.sql` - the 22-table schema, from the original Luck-Cays MySQL design.
+- `GET /api/health` - reports whether the database is reachable.
+
+`server/.env` and `*.pem` are gitignored. Never commit them.

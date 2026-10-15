@@ -9,3 +9,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Database CA certificate (downloaded from Aiven)
+*.pem
