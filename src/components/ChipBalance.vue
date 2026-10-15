@@ -60,13 +60,13 @@ const label = computed(() => `Balance: ${wallet.formatted} Luck-Cays Chips`);
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--gold);
-  box-shadow: 0 0 7px var(--gold-glow);
+  background: var(--sunset);
+  box-shadow: 0 0 7px var(--sunset-glow);
   flex-shrink: 0;
 }
 
 .amount {
-  color: var(--gold);
+  color: var(--sunset);
   font-size: 0.95rem;
 }
 
@@ -79,12 +79,12 @@ const label = computed(() => `Balance: ${wallet.formatted} Luck-Cays Chips`);
 
 .flash-up {
   border-color: var(--win);
-  background: rgba(74, 222, 128, 0.14);
+  background: rgba(124, 207, 154, 0.14);
 }
 
 .flash-down {
   border-color: var(--loss-dim);
-  background: rgba(248, 113, 113, 0.1);
+  background: rgba(236, 106, 92, 0.1);
 }
 
 @media (max-width: 420px) {

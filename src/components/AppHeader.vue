@@ -107,7 +107,7 @@ async function signOut(): Promise<void> {
   top: 0;
   z-index: 40;
   height: var(--header-height);
-  background: rgba(7, 13, 20, 0.86);
+  background: rgba(12, 17, 24, 0.86);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -146,21 +146,21 @@ async function signOut(): Promise<void> {
   background:
     radial-gradient(circle at 50% 50%, var(--surface-1) 0 34%, transparent 35%),
     conic-gradient(
-      var(--gold) 0 12.5%,
+      var(--sunset) 0 12.5%,
       var(--surface-3) 0 25%,
-      var(--gold) 0 37.5%,
+      var(--sunset) 0 37.5%,
       var(--surface-3) 0 50%,
-      var(--gold) 0 62.5%,
+      var(--sunset) 0 62.5%,
       var(--surface-3) 0 75%,
-      var(--gold) 0 87.5%,
+      var(--sunset) 0 87.5%,
       var(--surface-3) 0
     );
-  border: 1.5px solid var(--gold-dim);
-  box-shadow: 0 0 10px var(--gold-glow);
+  border: 1.5px solid var(--sunset-dim);
+  box-shadow: 0 0 10px var(--sunset-glow);
 }
 
 .brand-dash {
-  color: var(--gold);
+  color: var(--sunset);
 }
 
 .nav {
@@ -187,8 +187,8 @@ async function signOut(): Promise<void> {
 }
 
 .nav-link.router-link-active {
-  color: var(--gold);
-  background: rgba(245, 195, 88, 0.1);
+  color: var(--sunset);
+  background: rgba(242, 165, 65, 0.1);
 }
 
 .account {

@@ -164,7 +164,7 @@ function marketLabel(type: string, line: string | null): string {
 function statusClass(status: BetStatus): string {
   if (status === "won") return "badge-win";
   if (status === "lost") return "badge-loss";
-  if (status === "open") return "badge-teal";
+  if (status === "open") return "badge-sky";
   return "badge-muted";
 }
 
@@ -300,14 +300,14 @@ function kickoff(iso: string): string {
 
             <div class="row-between returns">
               <span class="small muted">Potential return</span>
-              <span class="chips chips-gold bold">{{ formatChips(potentialReturn) }} LC</span>
+              <span class="chips chips-sunset bold">{{ formatChips(potentialReturn) }} LC</span>
             </div>
 
             <div v-if="slipError" class="alert alert-warn tiny">{{ slipError }}</div>
 
             <button
               class="btn btn-block"
-              :class="newOdds ? 'btn-teal' : 'btn-primary'"
+              :class="newOdds ? 'btn-sky' : 'btn-primary'"
               :disabled="placing || stake < 1 || !wallet.canAfford(String(stake))"
               @click="place"
             >
@@ -338,7 +338,7 @@ function kickoff(iso: string): string {
               <span class="faint">
                 <span class="chips">{{ formatChips(bet.stake) }}</span> at {{ bet.odds }}
               </span>
-              <span class="chips chips-gold">{{ formatChips(bet.potentialWin) }} LC</span>
+              <span class="chips chips-sunset">{{ formatChips(bet.potentialWin) }} LC</span>
             </div>
           </div>
         </div>
@@ -399,9 +399,9 @@ function kickoff(iso: string): string {
 }
 
 .filter-on {
-  background: rgba(245, 195, 88, 0.12);
-  border-color: var(--gold-dim);
-  color: var(--gold);
+  background: rgba(242, 165, 65, 0.12);
+  border-color: var(--sunset-dim);
+  color: var(--sunset);
 }
 
 .event {
@@ -458,7 +458,7 @@ function kickoff(iso: string): string {
 }
 
 .odds:hover:not(:disabled) {
-  border-color: var(--teal-dim);
+  border-color: var(--sky-dim);
   background: var(--surface-2);
 }
 
@@ -468,8 +468,8 @@ function kickoff(iso: string): string {
 }
 
 .odds-on {
-  border-color: var(--gold);
-  background: rgba(245, 195, 88, 0.1);
+  border-color: var(--sunset);
+  background: rgba(242, 165, 65, 0.1);
 }
 
 .odds-label {
@@ -483,7 +483,7 @@ function kickoff(iso: string): string {
 
 .odds-price {
   font-weight: 700;
-  color: var(--gold);
+  color: var(--sunset);
 }
 
 .side {

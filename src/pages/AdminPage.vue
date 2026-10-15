@@ -341,7 +341,7 @@ function when(iso: string): string {
         <dl class="facts">
           <div>
             <dt class="tiny faint">Balance</dt>
-            <dd class="chips chips-gold">{{ formatChips(selected.player.balance) }}</dd>
+            <dd class="chips chips-sunset">{{ formatChips(selected.player.balance) }}</dd>
           </div>
           <div>
             <dt class="tiny faint">VIP</dt>
@@ -454,7 +454,7 @@ function when(iso: string): string {
           </div>
 
           <button
-            class="btn btn-teal btn-sm"
+            class="btn btn-sky btn-sm"
             :disabled="busy || !fsGame || !fsBet || fsSpins < 1 || fsReason.trim().length < 5"
             @click="grantFreeSpins"
           >
@@ -642,8 +642,8 @@ function when(iso: string): string {
 }
 
 .tab-on {
-  color: var(--gold);
-  border-bottom-color: var(--gold);
+  color: var(--sunset);
+  border-bottom-color: var(--sunset);
 }
 
 .split {
@@ -713,7 +713,7 @@ code {
   background: var(--surface-3);
   padding: 1px 5px;
   border-radius: 4px;
-  color: var(--teal);
+  color: var(--sky);
 }
 
 @media (max-width: 980px) {

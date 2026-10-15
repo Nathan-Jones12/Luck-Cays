@@ -74,7 +74,7 @@ onMounted(async () => {
         <strong class="chips">{{ progress.pointsToNextTier.toLocaleString() }}</strong> more points
         to reach <strong>{{ progress.nextTier.name }}</strong
         >, which pays
-        <span class="chips chips-gold">{{ formatChips(progress.nextTier.levelupBonus) }} LC</span>
+        <span class="chips chips-sunset">{{ formatChips(progress.nextTier.levelupBonus) }} LC</span>
         on arrival.
       </p>
       <p v-else class="small muted">You are at Diamond, the top tier. Nothing left to climb.</p>
@@ -96,7 +96,7 @@ onMounted(async () => {
         </div>
         <div class="perk">
           <span class="tiny faint">Cashback pending</span>
-          <p class="perk-value chips chips-gold">{{ formatChips(progress.pendingCashback) }}</p>
+          <p class="perk-value chips chips-sunset">{{ formatChips(progress.pendingCashback) }}</p>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ onMounted(async () => {
                 <span class="tier-cell">
                   <span class="dot" :class="`dot-${tier.name.toLowerCase()}`"></span>
                   {{ tier.name }}
-                  <span v-if="tier.id === currentTierId" class="badge badge-gold tiny-badge">
+                  <span v-if="tier.id === currentTierId" class="badge badge-sunset tiny-badge">
                     You
                   </span>
                 </span>
@@ -181,7 +181,7 @@ onMounted(async () => {
 
 .tier-name {
   margin: 2px 0 0;
-  color: var(--gold);
+  color: var(--sunset);
 }
 
 .points {
@@ -200,7 +200,7 @@ onMounted(async () => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+  background: linear-gradient(90deg, var(--sunset-dim), var(--sunset));
   border-radius: var(--radius-pill);
   transition: width 420ms ease;
 }
@@ -241,8 +241,8 @@ onMounted(async () => {
 .dot-silver {
   background: #c0c8d0;
 }
-.dot-gold {
-  background: var(--gold);
+.dot-sunset {
+  background: var(--sunset);
 }
 .dot-platinum {
   background: #e5e4e2;
@@ -253,7 +253,7 @@ onMounted(async () => {
 }
 
 .row-current {
-  background: rgba(245, 195, 88, 0.07);
+  background: rgba(242, 165, 65, 0.07);
 }
 
 .tiny-badge {

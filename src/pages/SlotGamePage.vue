@@ -291,10 +291,10 @@ function adjustBet(direction: 1 | -1): void {
                   <span class="chips chips-win readout-amount">
                     +{{ formatChips(lastResult.totalWin) }} LC
                   </span>
-                  <span v-if="lastResult.scatterWin" class="badge badge-teal">
+                  <span v-if="lastResult.scatterWin" class="badge badge-sky">
                     {{ lastResult.scatterWin.count }} scatters
                   </span>
-                  <span v-if="lastResult.freeSpinsAwarded > 0" class="badge badge-gold">
+                  <span v-if="lastResult.freeSpinsAwarded > 0" class="badge badge-sunset">
                     +{{ lastResult.freeSpinsAwarded }} free spins
                   </span>
                 </template>
@@ -348,7 +348,7 @@ function adjustBet(direction: 1 | -1): void {
                 <button v-if="autoplayRemaining > 0" class="btn btn-danger" @click="stopAutoplay">
                   Stop ({{ autoplayRemaining }})
                 </button>
-                <button v-else class="btn btn-teal" :disabled="!canSpin" @click="startAutoplay">
+                <button v-else class="btn btn-sky" :disabled="!canSpin" @click="startAutoplay">
                   Auto &times;{{ autoSpins }}
                 </button>
               </div>
@@ -445,7 +445,7 @@ function adjustBet(direction: 1 | -1): void {
                     <tr v-for="symbol in paySymbols" :key="symbol.id">
                       <td>
                         <span class="sym-name">{{ symbol.name }}</span>
-                        <span v-if="symbol.kind === 'wild'" class="badge badge-gold tiny-badge">
+                        <span v-if="symbol.kind === 'wild'" class="badge badge-sunset tiny-badge">
                           Wild
                         </span>
                       </td>
@@ -535,7 +535,7 @@ function adjustBet(direction: 1 | -1): void {
 
 .readout-win {
   border-color: var(--win-dim);
-  background: rgba(74, 222, 128, 0.07);
+  background: rgba(124, 207, 154, 0.07);
 }
 
 .readout-label {
@@ -573,7 +573,7 @@ function adjustBet(direction: 1 | -1): void {
   min-width: 68px;
   text-align: center;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--sunset);
 }
 
 .spin-btn {

@@ -82,7 +82,7 @@ onMounted(async () => {
 
         <div class="row-between">
           <h3>{{ game.name }}</h3>
-          <span class="badge badge-gold">{{ (game.rtpTarget * 100).toFixed(1) }}% RTP</span>
+          <span class="badge badge-sunset">{{ (game.rtpTarget * 100).toFixed(1) }}% RTP</span>
         </div>
 
         <p class="small muted note">
@@ -148,13 +148,13 @@ onMounted(async () => {
 
 /* Each theme gets its own colour run, so the three cards are told apart at a glance. */
 .art-caribbean .art-cell:nth-child(1) {
-  background: linear-gradient(180deg, #f5c358, #c89a3c);
+  background: linear-gradient(180deg, #f2a541, #c97f24);
 }
 .art-caribbean .art-cell:nth-child(2) {
-  background: linear-gradient(180deg, #2fd4b4, #1d9f87);
+  background: linear-gradient(180deg, #8db4d4, #5f88aa);
 }
 .art-caribbean .art-cell:nth-child(3) {
-  background: linear-gradient(180deg, #f87171, #b84343);
+  background: linear-gradient(180deg, #ec6a5c, #b0473c);
 }
 .art-caribbean .art-cell:nth-child(4) {
   background: linear-gradient(180deg, #fb923c, #c2652a);
@@ -164,35 +164,35 @@ onMounted(async () => {
 }
 
 .art-abyss .art-cell:nth-child(1) {
-  background: linear-gradient(180deg, #60a5fa, #2f6fc4);
+  background: linear-gradient(180deg, #7aa7e6, #2f6fc4);
 }
 .art-abyss .art-cell:nth-child(2) {
   background: linear-gradient(180deg, #a78bfa, #7c5cd6);
 }
 .art-abyss .art-cell:nth-child(3) {
-  background: linear-gradient(180deg, #2fd4b4, #1d9f87);
+  background: linear-gradient(180deg, #8db4d4, #5f88aa);
 }
 .art-abyss .art-cell:nth-child(4) {
   background: linear-gradient(180deg, #334e68, #1f3448);
 }
 .art-abyss .art-cell:nth-child(5) {
-  background: linear-gradient(180deg, #f5c358, #c89a3c);
+  background: linear-gradient(180deg, #f2a541, #c97f24);
 }
 
 .art-temple .art-cell:nth-child(1) {
-  background: linear-gradient(180deg, #f5c358, #c89a3c);
+  background: linear-gradient(180deg, #f2a541, #c97f24);
 }
 .art-temple .art-cell:nth-child(2) {
-  background: linear-gradient(180deg, #4ade80, #1f9d52);
+  background: linear-gradient(180deg, #7ccf9a, #3f9a63);
 }
 .art-temple .art-cell:nth-child(3) {
   background: linear-gradient(180deg, #fb923c, #c2652a);
 }
 .art-temple .art-cell:nth-child(4) {
-  background: linear-gradient(180deg, #f87171, #b84343);
+  background: linear-gradient(180deg, #ec6a5c, #b0473c);
 }
 .art-temple .art-cell:nth-child(5) {
-  background: linear-gradient(180deg, #2fd4b4, #1d9f87);
+  background: linear-gradient(180deg, #8db4d4, #5f88aa);
 }
 
 .meta {
@@ -203,7 +203,7 @@ onMounted(async () => {
 }
 
 .go {
-  color: var(--teal);
+  color: var(--sky);
   font-weight: 650;
   font-size: 0.88rem;
 }
@@ -214,6 +214,6 @@ code {
   background: var(--surface-3);
   padding: 1px 5px;
   border-radius: 4px;
-  color: var(--teal);
+  color: var(--sky);
 }
 </style>

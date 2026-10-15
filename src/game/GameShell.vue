@@ -345,15 +345,15 @@ function exit(): void {
  * behaves the same everywhere it is embedded.
  */
 .shell {
-  --bg: #070d14;
-  --surface: #131f2c;
-  --border: #23374b;
-  --text: #e8f0f7;
-  --faint: #7f93a7;
-  --accent: #f5c358;
-  --accent-ink: #241a05;
-  --win: #4ade80;
-  --loss: #f87171;
+  --bg: #0c1118;
+  --surface: #18222e;
+  --border: #2a3747;
+  --text: #f2ede4;
+  --faint: #8a929c;
+  --accent: #f2a541;
+  --accent-ink: #2a1704;
+  --win: #7ccf9a;
+  --loss: #ec6a5c;
 
   display: flex;
   flex-direction: column;
@@ -374,15 +374,15 @@ function exit(): void {
 }
 
 .shell[data-brand="reef"] {
-  --accent: #2fd4b4;
-  --accent-ink: #04231d;
+  --accent: #8db4d4;
+  --accent-ink: #0b1a26;
 }
 .shell[data-brand="abyss"] {
-  --accent: #60a5fa;
+  --accent: #7aa7e6;
   --accent-ink: #061a33;
 }
 .shell[data-brand="temple"] {
-  --accent: #4ade80;
+  --accent: #7ccf9a;
   --accent-ink: #052e16;
 }
 
@@ -560,7 +560,7 @@ function exit(): void {
 .sheet {
   position: fixed;
   inset: 0;
-  background: rgba(7, 13, 20, 0.82);
+  background: rgba(12, 17, 24, 0.82);
   display: flex;
   align-items: flex-end;
   justify-content: center;

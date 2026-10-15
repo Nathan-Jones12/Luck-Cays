@@ -214,7 +214,7 @@ function sitOut(value: boolean): void {
         <div class="centre">
           <div class="pot">
             <span class="tiny faint">Pot</span>
-            <p class="chips chips-gold pot-amount">
+            <p class="chips chips-sunset pot-amount">
               {{ formatChips(table.pots[0]?.amount ?? "0") }}
             </p>
           </div>
@@ -306,7 +306,7 @@ function sitOut(value: boolean): void {
 
           <button v-if="actionOf('check')" class="btn" @click="act('check')">Check</button>
 
-          <button v-if="actionOf('call')" class="btn btn-teal" @click="act('call')">
+          <button v-if="actionOf('call')" class="btn btn-sky" @click="act('call')">
             Call {{ formatChips(actionOf("call")?.callAmount ?? "0") }}
           </button>
 
@@ -373,7 +373,7 @@ function sitOut(value: boolean): void {
   min-height: 360px;
   border-radius: 180px / 120px;
   background: radial-gradient(ellipse at 50% 42%, #14503f 0%, #0e3a2e 55%, #0a2a21 100%);
-  border: 10px solid #1b2b3b;
+  border: 10px solid #212d3a;
   box-shadow:
     inset 0 0 70px rgba(0, 0, 0, 0.6),
     var(--shadow-lg);
@@ -467,7 +467,7 @@ function sitOut(value: boolean): void {
   min-width: 108px;
   padding: 7px 10px;
   border-radius: var(--radius);
-  background: rgba(7, 13, 20, 0.84);
+  background: rgba(12, 17, 24, 0.84);
   border: 1px solid var(--border-strong);
   text-align: center;
   transition:
@@ -476,13 +476,13 @@ function sitOut(value: boolean): void {
 }
 
 .seat-empty {
-  background: rgba(7, 13, 20, 0.4);
+  background: rgba(12, 17, 24, 0.4);
   border-style: dashed;
 }
 
 .seat-turn {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px var(--gold-glow);
+  border-color: var(--sunset);
+  box-shadow: 0 0 0 3px var(--sunset-glow);
 }
 
 .seat-folded {
@@ -490,7 +490,7 @@ function sitOut(value: boolean): void {
 }
 
 .seat-mine {
-  border-color: var(--teal);
+  border-color: var(--sky);
 }
 
 .seat-head {
@@ -526,7 +526,7 @@ function sitOut(value: boolean): void {
 .seat-stack {
   display: block;
   font-size: 0.82rem;
-  color: var(--gold);
+  color: var(--sunset);
   font-weight: 650;
 }
 
@@ -540,7 +540,7 @@ function sitOut(value: boolean): void {
 .committed {
   display: block;
   font-size: 0.72rem;
-  color: var(--teal);
+  color: var(--sky);
   margin-top: 4px;
 }
 
@@ -571,7 +571,7 @@ function sitOut(value: boolean): void {
 .raise-slider {
   flex: 1;
   min-width: 120px;
-  accent-color: var(--gold);
+  accent-color: var(--sunset);
 }
 
 .waiting {

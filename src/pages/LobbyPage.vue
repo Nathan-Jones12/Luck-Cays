@@ -27,7 +27,7 @@ const features = [
     tag: "3 games",
     blurb:
       "Five reels, twenty lines, free-spin bonuses. Every outcome is drawn server-side and every game's measured return-to-player is published.",
-    accent: "gold",
+    accent: "sunset",
   },
   {
     to: "/sports",
@@ -35,7 +35,7 @@ const features = [
     tag: "Pre-match",
     blurb:
       "Moneyline, spreads and totals across football, basketball, tennis and more. Odds lock the moment you place a bet.",
-    accent: "teal",
+    accent: "sky",
   },
   {
     to: "/poker",
@@ -92,7 +92,7 @@ async function claimDaily(): Promise<void> {
     <!-- Hero -->
     <section class="hero">
       <div class="hero-copy">
-        <span class="badge badge-gold">Play money &middot; no cash value</span>
+        <span class="badge badge-sunset">Play money &middot; no cash value</span>
         <h1>
           A casino where the only thing you can lose<br />
           is <span class="accent">imaginary</span>.
@@ -100,7 +100,7 @@ async function claimDaily(): Promise<void> {
         <p class="lede">
           Slots, sports betting, poker and VIP rewards, all played with Luck-Cays Chips. Sign up and
           we will hand you
-          <strong class="chips chips-gold">{{ formatChips("10000") }} LC</strong> to start, plus a
+          <strong class="chips chips-sunset">{{ formatChips("10000") }} LC</strong> to start, plus a
           free top-up every day. Nothing here costs real money, because nothing here can be bought.
         </p>
 
@@ -132,7 +132,7 @@ async function claimDaily(): Promise<void> {
         </template>
 
         <template v-else-if="wallet.bonuses">
-          <p class="aside-amount chips chips-gold">
+          <p class="aside-amount chips chips-sunset">
             {{ formatChips(wallet.bonuses.daily.amount) }} LC
           </p>
           <p v-if="wallet.bonuses.daily.multiplier > 1" class="tiny faint">
@@ -157,7 +157,7 @@ async function claimDaily(): Promise<void> {
           <hr class="divider" />
           <div class="row-between">
             <span class="small muted">VIP tier</span>
-            <span class="badge badge-gold">{{ vip.tier.name }}</span>
+            <span class="badge badge-sunset">{{ vip.tier.name }}</span>
           </div>
           <div
             class="progress"
@@ -253,7 +253,7 @@ async function claimDaily(): Promise<void> {
 }
 
 .accent {
-  color: var(--gold);
+  color: var(--sunset);
 }
 
 .lede {
@@ -294,7 +294,7 @@ async function claimDaily(): Promise<void> {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+  background: linear-gradient(90deg, var(--sunset-dim), var(--sunset));
   border-radius: var(--radius-pill);
   transition: width 400ms ease;
 }
@@ -322,22 +322,22 @@ async function claimDaily(): Promise<void> {
 }
 
 .feature-go {
-  color: var(--teal);
+  color: var(--sky);
   font-weight: 650;
   font-size: 0.88rem;
 }
 
-.accent-gold {
-  border-top-color: var(--gold);
+.accent-sunset {
+  border-top-color: var(--sunset);
 }
-.accent-teal {
-  border-top-color: var(--teal);
+.accent-sky {
+  border-top-color: var(--sky);
 }
 .accent-violet {
   border-top-color: #a78bfa;
 }
 .accent-rose {
-  border-top-color: #f87171;
+  border-top-color: #ec6a5c;
 }
 
 .fairness {
@@ -363,7 +363,7 @@ code {
   background: var(--surface-3);
   padding: 1px 5px;
   border-radius: 4px;
-  color: var(--teal);
+  color: var(--sky);
 }
 
 @media (max-width: 900px) {

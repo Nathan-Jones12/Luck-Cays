@@ -76,7 +76,7 @@ async function submit(): Promise<void> {
     <div v-if="bonus" class="card center welcome">
       <div class="welcome-mark" aria-hidden="true"></div>
       <h1>You are in</h1>
-      <p class="chips chips-gold welcome-amount">+{{ formatChips(bonus) }} LC</p>
+      <p class="chips chips-sunset welcome-amount">+{{ formatChips(bonus) }} LC</p>
       <p class="muted">Your signup bonus has landed. Taking you to the slots&hellip;</p>
     </div>
 
@@ -84,7 +84,7 @@ async function submit(): Promise<void> {
       <h1>Create an account</h1>
       <p class="muted small">
         Free, instant, and we will add
-        <strong class="chips chips-gold">{{ formatChips("10000") }} LC</strong> to your wallet.
+        <strong class="chips chips-sunset">{{ formatChips("10000") }} LC</strong> to your wallet.
         Already have one? <RouterLink to="/login">Sign in</RouterLink>.
       </p>
 
@@ -191,17 +191,17 @@ async function submit(): Promise<void> {
   background:
     radial-gradient(circle at 50% 50%, var(--surface-1) 0 34%, transparent 35%),
     conic-gradient(
-      var(--gold) 0 12.5%,
+      var(--sunset) 0 12.5%,
       var(--surface-3) 0 25%,
-      var(--gold) 0 37.5%,
+      var(--sunset) 0 37.5%,
       var(--surface-3) 0 50%,
-      var(--gold) 0 62.5%,
+      var(--sunset) 0 62.5%,
       var(--surface-3) 0 75%,
-      var(--gold) 0 87.5%,
+      var(--sunset) 0 87.5%,
       var(--surface-3) 0
     );
-  border: 2px solid var(--gold-dim);
-  box-shadow: 0 0 26px var(--gold-glow);
+  border: 2px solid var(--sunset-dim);
+  box-shadow: 0 0 26px var(--sunset-glow);
   animation: pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

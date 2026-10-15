@@ -61,7 +61,7 @@ const items = [
   }
 
   .item.router-link-active {
-    color: var(--gold);
+    color: var(--sunset);
   }
 
   .glyph {

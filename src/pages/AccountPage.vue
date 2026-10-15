@@ -127,7 +127,7 @@ function when(iso: string): string {
       </div>
       <div class="right">
         <span class="tiny faint">Balance</span>
-        <p class="chips chips-gold balance">{{ wallet.formatted }} LC</p>
+        <p class="chips chips-sunset balance">{{ wallet.formatted }} LC</p>
       </div>
     </div>
 
@@ -222,7 +222,7 @@ function when(iso: string): string {
               <td class="tiny nowrap faint">{{ when(round.createdAt) }}</td>
               <td>
                 {{ round.gameSlug }}
-                <span v-if="round.isFreeSpin" class="badge badge-gold tiny-badge">Free</span>
+                <span v-if="round.isFreeSpin" class="badge badge-sunset tiny-badge">Free</span>
               </td>
               <td class="right chips">{{ round.isFreeSpin ? "—" : formatChips(round.bet) }}</td>
               <td class="right chips" :class="Number(round.win) > 0 ? 'chips-win' : 'faint'">
@@ -353,8 +353,8 @@ function when(iso: string): string {
 }
 
 .tab-on {
-  color: var(--gold);
-  border-bottom-color: var(--gold);
+  color: var(--sunset);
+  border-bottom-color: var(--sunset);
 }
 
 .ledger-foot {
@@ -388,7 +388,7 @@ function when(iso: string): string {
   font-family: var(--font-mono);
   font-size: 1.05rem;
   letter-spacing: 0.1em;
-  color: var(--gold);
+  color: var(--sunset);
   margin-top: 4px;
   word-break: break-all;
 }
@@ -408,6 +408,6 @@ function when(iso: string): string {
   font-family: var(--font-mono);
   font-size: 0.9rem;
   text-align: center;
-  color: var(--gold);
+  color: var(--sunset);
 }
 </style>

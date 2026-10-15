@@ -170,7 +170,7 @@ async function submit(): Promise<void> {
 .link-btn {
   background: none;
   border: 0;
-  color: var(--teal);
+  color: var(--sky);
   font: inherit;
   font-size: 0.82rem;
   padding: 0;

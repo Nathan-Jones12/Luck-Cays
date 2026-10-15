@@ -66,7 +66,7 @@ main {
 }
 
 .footer-notice strong {
-  color: var(--gold);
+  color: var(--sunset);
 }
 
 code {

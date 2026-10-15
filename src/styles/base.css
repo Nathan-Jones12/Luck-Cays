@@ -9,35 +9,36 @@
 
 :root {
   /* Surfaces, deepest first. */
-  --bg: #070d14;
-  --surface-1: #0d1620;
-  --surface-2: #131f2c;
-  --surface-3: #1b2b3b;
-  --surface-raised: #223449;
+  --bg: #0c1118;
+  --surface-1: #121a23;
+  --surface-2: #18222e;
+  --surface-3: #212d3a;
+  --surface-raised: #2a3847;
 
-  --border: #23374b;
-  --border-strong: #32506c;
+  --border: #2a3747;
+  --border-strong: #3d4f62;
 
   /* Text. */
-  --text: #e8f0f7;
-  --text-muted: #94a9bd;
-  --text-faint: #5f7589;
+  --text: #f2ede4;
+  --text-muted: #a7b0ba;
+  --text-faint: #6d7884;
 
-  /* Brand: a warm gold against the deep teal, reading as chips on felt. */
-  --gold: #f5c358;
-  --gold-dim: #c89a3c;
-  --gold-glow: rgba(245, 195, 88, 0.22);
+  /* Brand: "Cay Sunset" - taken from the background photo. Sunset amber from the horizon
+   * glow, dusk sky blue from the upper sky, on slate surfaces matching the sky in shadow. */
+  --sunset: #f2a541;
+  --sunset-dim: #c97f24;
+  --sunset-glow: rgba(242, 165, 65, 0.22);
 
-  --teal: #2fd4b4;
-  --teal-dim: #1d9f87;
+  --sky: #8db4d4;
+  --sky-dim: #5f88aa;
 
   /* Semantic. */
-  --win: #4ade80;
-  --win-dim: #1f9d52;
-  --loss: #f87171;
-  --loss-dim: #b84343;
-  --warn: #fbbf24;
-  --info: #60a5fa;
+  --win: #7ccf9a;
+  --win-dim: #3f9a63;
+  --loss: #ec6a5c;
+  --loss-dim: #b0473c;
+  --warn: #f6d776;
+  --info: #7aa7e6;
 
   /* Typography. */
   --font-sans:
@@ -71,11 +72,13 @@ body {
 }
 
 body {
-  background: var(--bg);
-  /* A faint pool of light behind the content, so the page is not a flat black field. */
+  background-color: var(--bg);
+  /* The sunset photo, tinted toward --bg so text and cards stay readable on top of it. */
   background-image:
-    radial-gradient(1100px 520px at 50% -10%, rgba(47, 212, 180, 0.07), transparent 65%),
-    radial-gradient(760px 420px at 85% 8%, rgba(245, 195, 88, 0.05), transparent 70%);
+    linear-gradient(rgba(12, 17, 24, 0.45), rgba(12, 17, 24, 0.75)),
+    url("/images/background.jpg");
+  background-size: cover;
+  background-position: center;
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-sans);
@@ -110,7 +113,7 @@ p {
 }
 
 a {
-  color: var(--teal);
+  color: var(--sky);
   text-decoration: none;
 }
 a:hover {
@@ -119,7 +122,7 @@ a:hover {
 
 /* A visible focus ring everywhere. Removing it would make this unusable by keyboard. */
 :focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--sky);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -255,21 +258,21 @@ a:hover {
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--gold), var(--gold-dim));
-  border-color: var(--gold-dim);
-  color: #241a05;
-  box-shadow: 0 0 0 0 var(--gold-glow);
+  background: linear-gradient(180deg, var(--sunset), var(--sunset-dim));
+  border-color: var(--sunset-dim);
+  color: #2a1704;
+  box-shadow: 0 0 0 0 var(--sunset-glow);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #ffd470, var(--gold));
-  box-shadow: 0 0 0 4px var(--gold-glow);
+  background: linear-gradient(180deg, #f7c071, var(--sunset));
+  box-shadow: 0 0 0 4px var(--sunset-glow);
 }
 
-.btn-teal {
-  background: linear-gradient(180deg, var(--teal), var(--teal-dim));
-  border-color: var(--teal-dim);
-  color: #04231d;
+.btn-sky {
+  background: linear-gradient(180deg, var(--sky), var(--sky-dim));
+  border-color: var(--sky-dim);
+  color: #0b1a26;
 }
 
 .btn-ghost {
@@ -331,13 +334,13 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--teal);
+  border-color: var(--sky);
   outline: none;
 }
 
 input[type="checkbox"] {
   width: auto;
-  accent-color: var(--teal);
+  accent-color: var(--sky);
 }
 
 .field {
@@ -365,8 +368,8 @@ input[type="checkbox"] {
   font-feature-settings: "tnum";
 }
 
-.chips-gold {
-  color: var(--gold);
+.chips-sunset {
+  color: var(--sunset);
 }
 .chips-win {
   color: var(--win);
@@ -390,28 +393,28 @@ input[type="checkbox"] {
   border: 1px solid transparent;
 }
 
-.badge-gold {
-  background: rgba(245, 195, 88, 0.14);
-  color: var(--gold);
-  border-color: rgba(245, 195, 88, 0.3);
+.badge-sunset {
+  background: rgba(242, 165, 65, 0.14);
+  color: var(--sunset);
+  border-color: rgba(242, 165, 65, 0.3);
 }
 
-.badge-teal {
-  background: rgba(47, 212, 180, 0.13);
-  color: var(--teal);
-  border-color: rgba(47, 212, 180, 0.28);
+.badge-sky {
+  background: rgba(141, 180, 212, 0.13);
+  color: var(--sky);
+  border-color: rgba(141, 180, 212, 0.28);
 }
 
 .badge-win {
-  background: rgba(74, 222, 128, 0.13);
+  background: rgba(124, 207, 154, 0.13);
   color: var(--win);
-  border-color: rgba(74, 222, 128, 0.28);
+  border-color: rgba(124, 207, 154, 0.28);
 }
 
 .badge-loss {
-  background: rgba(248, 113, 113, 0.13);
+  background: rgba(236, 106, 92, 0.13);
   color: var(--loss);
-  border-color: rgba(248, 113, 113, 0.28);
+  border-color: rgba(236, 106, 92, 0.28);
 }
 
 .badge-muted {
@@ -502,26 +505,26 @@ input[type="checkbox"] {
 }
 
 .alert-error {
-  background: rgba(248, 113, 113, 0.1);
-  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(236, 106, 92, 0.1);
+  border-color: rgba(236, 106, 92, 0.35);
   color: #ffc9c9;
 }
 
 .alert-ok {
-  background: rgba(74, 222, 128, 0.09);
-  border-color: rgba(74, 222, 128, 0.32);
+  background: rgba(124, 207, 154, 0.09);
+  border-color: rgba(124, 207, 154, 0.32);
   color: #c6f6d5;
 }
 
 .alert-info {
-  background: rgba(96, 165, 250, 0.09);
-  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(122, 167, 230, 0.09);
+  border-color: rgba(122, 167, 230, 0.3);
   color: #cfe2ff;
 }
 
 .alert-warn {
-  background: rgba(251, 191, 36, 0.09);
-  border-color: rgba(251, 191, 36, 0.32);
+  background: rgba(246, 215, 118, 0.09);
+  border-color: rgba(246, 215, 118, 0.32);
   color: #ffeab8;
 }
 

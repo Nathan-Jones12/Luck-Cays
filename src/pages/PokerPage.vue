@@ -48,7 +48,7 @@ onMounted(async () => {
       <article v-for="table in tables" :key="table.id" class="card table-card">
         <div class="row-between">
           <h3>{{ table.name }}</h3>
-          <span class="badge badge-teal"> {{ table.seatedCount }}/{{ table.maxSeats }} </span>
+          <span class="badge badge-sky"> {{ table.seatedCount }}/{{ table.maxSeats }} </span>
         </div>
 
         <dl class="stakes">
@@ -153,6 +153,6 @@ code {
   background: var(--surface-3);
   padding: 1px 5px;
   border-radius: 4px;
-  color: var(--teal);
+  color: var(--sky);
 }
 </style>
