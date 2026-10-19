@@ -52,13 +52,18 @@ export function formatChips(value: bigint | ChipString): string {
 }
 
 /**
- * Multiply chips by a decimal factor (cashback percentages, bonus multipliers)
+ * Multiply chips by a decimal factor (lossback rates, bonus multipliers)
  * without ever going through a float. `factor` is given with `scale` implied
  * decimal places, so 2.5x is `applyFactor(n, 25n, 1)`.
  */
 export function applyFactor(chips: bigint, factor: bigint, scale: number): bigint {
   const divisor = 10n ** BigInt(scale);
   return (chips * factor) / divisor;
+}
+
+/** A basis-point rate for display: 150 -> "1.5%", 1200 -> "12%". */
+export function formatBasisPoints(bp: number): string {
+  return `${(bp / 100).toFixed(2).replace(/\.?0+$/, "")}%`;
 }
 
 /** Percentage of an amount, floored. `pct` is basis-point-free: 7 means 7%. */

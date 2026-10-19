@@ -32,7 +32,7 @@ interface PlayerDetail {
   player: PlayerRow & {
     failedLoginCount: number;
     lockedUntil: string | null;
-    weekNetLoss: string;
+    periodNetLoss: string;
   };
   walletConsistent: boolean;
   ledgerSum: string;
@@ -610,9 +610,9 @@ function when(iso: string): string {
         <button
           class="btn"
           :disabled="!canWrite || busy"
-          @click="runJob('/admin/jobs/cashback', 'Cashback')"
+          @click="runJob('/admin/jobs/lossback', 'Lossback')"
         >
-          Pay weekly cashback
+          Pay due lossback now
         </button>
       </div>
     </section>

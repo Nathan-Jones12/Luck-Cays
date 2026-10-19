@@ -48,9 +48,9 @@ const features = [
   {
     to: "/vip",
     title: "VIP rewards",
-    tag: "5 tiers",
+    tag: "8 tiers",
     blurb:
-      "Earn points on everything you wager. Climb from Bronze to Diamond for bigger daily bonuses, level-up chips and weekly cashback.",
+      "Earn points on everything you wager. Climb from Grunt to Shark for up to 12% daily lossback on slots and sports, paid every day at 2pm.",
     accent: "rose",
   },
 ];
@@ -169,7 +169,7 @@ async function claimDaily(): Promise<void> {
           <p v-if="vip.nextTier" class="tiny faint">
             {{ vip.pointsToNextTier.toLocaleString() }} points to {{ vip.nextTier.name }}
           </p>
-          <p v-else class="tiny faint">Diamond &mdash; the top tier.</p>
+          <p v-else class="tiny faint">{{ vip.tier.name }} &mdash; the top tier.</p>
         </template>
       </aside>
     </section>

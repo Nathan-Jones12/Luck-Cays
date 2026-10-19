@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * VIP: the tier ladder, the player's position on it, and what each tier is worth.
+ * VIP: the tier ladder, the player's position on it, and the daily lossback each tier pays.
  *
  * The ladder is public so it can be read before signing up; progress only appears when there is
  * someone to show progress for.
  */
 import { computed, onMounted, ref } from "vue";
-import { formatChips, type VipProgress, type VipTier } from "@luck-cays/shared";
+import { formatBasisPoints, formatChips, type VipProgress, type VipTier } from "@luck-cays/shared";
 import { api } from "@/api/client";
 import { useAuthStore } from "@/stores/auth";
 
@@ -16,6 +16,17 @@ const progress = ref<VipProgress | null>(null);
 const loading = ref(true);
 
 const currentTierId = computed(() => progress.value?.tier.id ?? null);
+
+/** The next payout in the viewer's own timezone, e.g. "Mon 2:00 PM". */
+const nextPayout = computed(() =>
+  progress.value
+    ? new Date(progress.value.nextPayoutAt).toLocaleString(undefined, {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "",
+);
 
 onMounted(async () => {
   const requests: Array<Promise<unknown>> = [
@@ -73,48 +84,50 @@ onMounted(async () => {
       <p v-if="progress.nextTier" class="small muted">
         <strong class="chips">{{ progress.pointsToNextTier.toLocaleString() }}</strong> more points
         to reach <strong>{{ progress.nextTier.name }}</strong
-        >, which pays
-        <span class="chips chips-sunset">{{ formatChips(progress.nextTier.levelupBonus) }} LC</span>
-        on arrival.
+        >, where lossback rises to
+        <strong class="chips-sunset">{{ formatBasisPoints(progress.nextTier.lossbackBp) }}</strong>.
       </p>
-      <p v-else class="small muted">You are at Diamond, the top tier. Nothing left to climb.</p>
+      <p v-else class="small muted">
+        You are at {{ progress.tier.name }}, the top tier. Nothing left to climb.
+      </p>
 
       <hr class="divider" />
 
       <div class="perks">
         <div class="perk">
-          <span class="tiny faint">Daily bonus multiplier</span>
-          <p class="perk-value">&times;{{ progress.tier.dailyMultiplier }}</p>
+          <span class="tiny faint">Daily lossback</span>
+          <p class="perk-value">{{ formatBasisPoints(progress.tier.lossbackBp) }}</p>
         </div>
         <div class="perk">
-          <span class="tiny faint">Weekly cashback</span>
-          <p class="perk-value">{{ progress.tier.cashbackPct }}%</p>
+          <span class="tiny faint">Wagered since last payout</span>
+          <p class="perk-value chips">{{ formatChips(progress.periodWagered) }}</p>
         </div>
         <div class="perk">
-          <span class="tiny faint">This week's net losses</span>
-          <p class="perk-value chips">{{ formatChips(progress.weekNetLoss) }}</p>
+          <span class="tiny faint">Won since last payout</span>
+          <p class="perk-value chips">{{ formatChips(progress.periodWon) }}</p>
         </div>
         <div class="perk">
-          <span class="tiny faint">Cashback pending</span>
-          <p class="perk-value chips chips-sunset">{{ formatChips(progress.pendingCashback) }}</p>
+          <span class="tiny faint">Lossback at {{ nextPayout }}</span>
+          <p class="perk-value chips chips-sunset">{{ formatChips(progress.pendingLossback) }}</p>
         </div>
       </div>
 
-      <p class="tiny faint cashback-note">
-        Cashback is paid automatically at the end of each seven-day period, on net losses only. A
-        winning week pays nothing and does not carry a deficit forward.
+      <p class="tiny faint lossback-note">
+        Lossback is paid automatically every day at 2pm Bahamas time: your tier's rate on what you
+        wagered minus what you won on slots and sports since the last payout. A winning day pays
+        nothing and does not carry a deficit forward.
       </p>
     </section>
 
     <section v-else-if="!auth.isSignedIn" class="alert alert-info">
       <RouterLink to="/signup">Create an account</RouterLink> to start earning points. Everyone
-      begins at Bronze.
+      begins at {{ tiers[0]?.name ?? "the first tier" }}.
     </section>
 
     <!-- The ladder -->
     <section>
       <div class="page-head">
-        <h2>The five tiers</h2>
+        <h2>The {{ tiers.length || "" }} tiers</h2>
       </div>
 
       <div v-if="loading" class="empty">Loading tiers&hellip;</div>
@@ -125,9 +138,7 @@ onMounted(async () => {
             <tr>
               <th>Tier</th>
               <th class="right">Points needed</th>
-              <th class="right">Daily bonus</th>
-              <th class="right">Level-up chips</th>
-              <th class="right">Weekly cashback</th>
+              <th class="right">Daily lossback</th>
             </tr>
           </thead>
           <tbody>
@@ -146,12 +157,8 @@ onMounted(async () => {
                 </span>
               </td>
               <td class="right mono">{{ tier.minPoints.toLocaleString() }}</td>
-              <td class="right mono">&times;{{ tier.dailyMultiplier }}</td>
               <td class="right mono">
-                {{ tier.levelupBonus === "0" ? "—" : formatChips(tier.levelupBonus) }}
-              </td>
-              <td class="right mono">
-                {{ tier.cashbackPct === 0 ? "—" : `${tier.cashbackPct}%` }}
+                {{ tier.lossbackBp === 0 ? "—" : formatBasisPoints(tier.lossbackBp) }}
               </td>
             </tr>
           </tbody>
@@ -159,8 +166,8 @@ onMounted(async () => {
       </div>
 
       <p class="tiny faint ladder-note">
-        Points are awarded on settled wagers only. A rejected bet earns nothing, and the level-up
-        bonus for each tier can only ever be paid once.
+        Points are awarded on settled wagers only, and a rejected bet earns nothing. Lossback is
+        paid daily at 2pm Bahamas time on slots and sports.
       </p>
     </section>
   </div>
@@ -217,7 +224,7 @@ onMounted(async () => {
   font-weight: 700;
 }
 
-.cashback-note {
+.lossback-note {
   margin: 14px 0 0;
 }
 
@@ -235,21 +242,31 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.dot-bronze {
-  background: #b87333;
+/* One colour per fish, rising from sand-grey to the sunset at Shark. */
+.dot-grunt {
+  background: #a7b0ba;
 }
-.dot-silver {
-  background: #c0c8d0;
+.dot-snapper {
+  background: #e0715c;
 }
-.dot-sunset {
+.dot-bonefish {
+  background: #d6dde4;
+}
+.dot-grouper {
+  background: #a3825f;
+}
+.dot-jack {
+  background: #8db4d4;
+}
+.dot-mahi {
+  background: #7ccf9a;
+}
+.dot-marlin {
+  background: #4f86d6;
+}
+.dot-shark {
   background: var(--sunset);
-}
-.dot-platinum {
-  background: #e5e4e2;
-}
-.dot-diamond {
-  background: #7dd3fc;
-  box-shadow: 0 0 8px rgba(125, 211, 252, 0.6);
+  box-shadow: 0 0 8px var(--sunset-glow);
 }
 
 .row-current {
