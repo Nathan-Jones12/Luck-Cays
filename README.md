@@ -63,5 +63,20 @@ npm run dev                   # http://localhost:4000/api/health
   credentials never go in the frontend: everything there is shipped to the browser.
 - `db/schema.sql` - the 22-table schema, from the original Luck-Cays MySQL design.
 - `GET /api/health` - reports whether the database is reachable.
+- `GET /api/vip/tiers` - the VIP ladder (public).
+- `src/wallet.ts` - the only code that changes balances: locks the wallet row, updates the
+  balance and appends a ledger entry, with an idempotency key so nothing is paid twice.
+- `src/jobs/lossback.ts` - daily VIP lossback. Every day at 2pm Bahamas time each player gets
+  their tier's rate (1.5% Grunt ... 12% Shark) of what they wagered minus what they won on
+  slots and sports since the last payout. Runs inside the server, checking every minute.
+  Time, timezone and games are in the `config_values` table.
+
+Other commands (from `server/`):
+
+```bash
+npm run db:sql -- db/seed.sql   # run any SQL file (seed.sql: VIP tiers + settings; re-runnable)
+npm run job:lossback            # pay any lossback that is due, right now (safe to repeat)
+npm run test:lossback           # payout-time maths + an end-to-end payout on a temporary player
+```
 
 `server/.env` and `*.pem` are gitignored. Never commit them.

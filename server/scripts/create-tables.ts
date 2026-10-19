@@ -7,20 +7,10 @@
  * Note: MySQL DDL is not transactional. If a statement fails part-way, the tables created
  * before it remain - the output says exactly which statement failed.
  */
-import { readFileSync } from "node:fs";
 import { pool } from "../src/db.js";
+import { readStatements } from "./sql.js";
 
-const sql = readFileSync(new URL("../db/schema.sql", import.meta.url), "utf8");
-
-// Strip `--` comment lines, then split on the semicolons that end each statement. The
-// schema has no semicolons inside strings, so this split is exact for this file.
-const statements = sql
-  .split("\n")
-  .filter((line) => !line.trimStart().startsWith("--"))
-  .join("\n")
-  .split(";")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const statements = readStatements(new URL("../db/schema.sql", import.meta.url));
 
 const wanted = statements
   .map((s) => /^CREATE TABLE `([^`]+)`/.exec(s)?.[1])

@@ -42,7 +42,14 @@ function poolOptions(): mysql.PoolOptions {
     // Chip amounts are BIGINT; return them as strings so no precision is lost past 2^53.
     supportBigNumbers: true,
     bigNumberStrings: true,
+    // Every DATETIME is UTC, both ways: JS Dates are written as UTC, and (below) the session
+    // time zone makes CURRENT_TIMESTAMP defaults UTC too. Payout times depend on this.
+    timezone: "Z",
   };
 }
 
 export const pool = mysql.createPool(poolOptions());
+
+pool.pool.on("connection", (connection) => {
+  connection.query("SET time_zone = '+00:00'");
+});

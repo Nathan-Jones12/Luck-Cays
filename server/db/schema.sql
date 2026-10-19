@@ -210,11 +210,13 @@ CREATE TABLE `vip_tiers` (
     `min_points` INTEGER NOT NULL,
     `daily_multiplier_bp` INTEGER NOT NULL,
     `levelup_bonus` BIGINT NOT NULL,
-    `cashback_pct` INTEGER NOT NULL,
+    -- Daily lossback rate in basis points: 150 = 1.5%.
+    `lossback_bp` INTEGER NOT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `vip_tiers_name_key`(`name`),
+    CONSTRAINT `vip_tiers_lossback_bp_range` CHECK (`lossback_bp` BETWEEN 0 AND 10000),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -223,8 +225,11 @@ CREATE TABLE `vip_progress` (
     `user_id` VARCHAR(191) NOT NULL,
     `lifetime_points` BIGINT NOT NULL DEFAULT 0,
     `tier_id` INTEGER NOT NULL,
-    `week_net_loss` BIGINT NOT NULL DEFAULT 0,
-    `week_started_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    -- The current lossback period, since the last daily payout.
+    `period_wagered` BIGINT NOT NULL DEFAULT 0,
+    `period_won` BIGINT NOT NULL DEFAULT 0,
+    `period_started_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `last_lossback_at` DATETIME(3) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
 
