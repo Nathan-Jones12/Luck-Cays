@@ -63,6 +63,11 @@ npm run dev                   # http://localhost:4000/api/health
   credentials never go in the frontend: everything there is shipped to the browser.
 - `db/schema.sql` - the 22-table schema, from the original Luck-Cays MySQL design.
 - `GET /api/health` - reports whether the database is reachable.
+- `GET /api/poker/tables` and `GET /api/poker/tables/:tableId` - read active table
+  summaries and empty/current seat snapshots. Seed the database to create the starter tables.
+- Socket.IO is attached at `/socket.io`. Poker mutation events are deliberately rejected until
+  backend authentication and authoritative game logic are implemented; this initial wiring
+  does not move wallet chips.
 - `GET /api/vip/tiers` - the VIP ladder (public).
 - `src/wallet.ts` - the only code that changes balances: locks the wallet row, updates the
   balance and appends a ledger entry, with an idempotency key so nothing is paid twice.

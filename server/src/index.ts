@@ -1,10 +1,18 @@
+import { createServer } from "node:http";
 import express from "express";
+import { Server } from "socket.io";
 import { pool } from "./db.js";
 import { startLossbackSchedule } from "./jobs/lossback.js";
+import { registerPokerSockets, registerPokerRoutes } from "./poker.js";
 import { getTiers } from "./vip.js";
 
 const app = express();
 app.use(express.json());
+const httpServer = createServer(app);
+const io = new Server(httpServer, { path: "/socket.io" });
+
+registerPokerRoutes(app);
+registerPokerSockets(io);
 
 /** Confirms the server is up and can reach the database. */
 app.get("/api/health", async (_req, res) => {
@@ -33,7 +41,7 @@ app.get("/api/vip/tiers", async (_req, res) => {
 // asking, so it is added together with authentication.
 
 const port = Number(process.env.PORT ?? 4000);
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
 });
 

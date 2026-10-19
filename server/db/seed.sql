@@ -35,3 +35,18 @@ VALUES
    'Games whose bets count toward lossback. Poker is excluded (player vs player).')
 AS new
 ON DUPLICATE KEY UPDATE `value` = new.`value`, `description` = new.`description`;
+
+-- Cash tables. IDs are stable so clients may link directly to a table.
+INSERT INTO `poker_tables`
+  (`id`, `name`, `max_seats`, `small_blind`, `big_blind`, `min_buyin`, `max_buyin`, `is_active`)
+VALUES
+  ('coral-reef', 'Coral Reef', 6, 25, 50, 1000, 5000, TRUE),
+  ('blue-lagoon', 'Blue Lagoon', 6, 100, 200, 5000, 20000, TRUE)
+ON DUPLICATE KEY UPDATE
+  `name` = new.`name`,
+  `max_seats` = new.`max_seats`,
+  `small_blind` = new.`small_blind`,
+  `big_blind` = new.`big_blind`,
+  `min_buyin` = new.`min_buyin`,
+  `max_buyin` = new.`max_buyin`,
+  `is_active` = new.`is_active`;
