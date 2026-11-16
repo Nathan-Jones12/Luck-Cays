@@ -1,1 +1,87 @@
-# Luck-Cays
+# Luck-Cays frontend
+
+The Vue 3 + Vite + Pinia + PixiJS frontend from the Luck-Cays monorepo (`apps/web`),
+extracted to run on its own against a backend of your choice.
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # vue-tsc typecheck + production build into dist/
+```
+
+## Wiring up a backend
+
+The dev server proxies `/api` and `/socket.io` to `http://localhost:4000`
+(`vite.config.ts` → `server.proxy`). Point that at your backend. Keeping the API
+same-origin through the proxy matters: the refresh token is a `SameSite=Strict`
+cookie, which the browser will not send cross-origin.
+
+All HTTP calls go through `src/api/client.ts` (base path `/api`, JSON, bearer
+access token, automatic `/auth/refresh` on 401). Real-time poker and balance
+updates go through `src/api/socket.ts` (Socket.IO).
+
+## The API contract: `src/shared`
+
+`src/shared` is a copy of the monorepo's `packages/shared/src`. It is imported as
+`@luck-cays/shared` (aliased in `vite.config.ts` and `tsconfig.json`) and holds:
+
+- `schemas/` — zod schemas and TypeScript types for every request and response
+  (auth, wallet, slots, sports, poker, vip, admin, embed). This is the contract
+  your backend needs to satisfy.
+- `money.ts` — chip amounts are whole numbers sent as decimal **strings** in JSON
+  and handled as `bigint`.
+- `slots/` — the slot engine and game configs. The frontend only needs their
+  types and symbol data for rendering; outcomes must come from the server.
+
+Endpoints the frontend calls (all under `/api`):
+
+| Area   | Endpoints |
+| ------ | --------- |
+| Auth   | `POST /auth/signup`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/totp/begin`, `/auth/totp/confirm`, `/auth/totp/disable`; `GET /auth/me` |
+| Wallet | `GET /wallet`, `/wallet/bonuses`; `POST /wallet/bonuses/claim` |
+| Slots  | `GET /slots`, `/slots/history/rounds`; `POST /slots/spin` |
+| Sports | `GET /sports/events`, `/sports/bets`; `POST /sports/bets` |
+| Poker  | `GET /poker/tables` (play is over Socket.IO) |
+| VIP    | `GET /vip/me`, `/vip/tiers` |
+| Admin  | `GET /admin/slots`, `/admin/audit`; `PATCH /admin/slots/...`; `POST /admin/players/chips`, `/admin/players/status` |
+| Embed  | `POST /launch` (launch tickets for `game.html`) |
+
+## Backend: `server/`
+
+A minimal Express + MySQL server, the starting point for the backend. It listens on
+port 4000, where the dev server already proxies `/api`.
+
+```bash
+cd server
+npm install
+cp .env.example .env          # then fill in DATABASE_URL (and ideally DATABASE_CA_PATH)
+npm run db:create-tables      # creates the tables from db/schema.sql; refuses if any exist
+npm run dev                   # http://localhost:4000/api/health
+```
+
+- `src/db.ts` - the MySQL connection pool, configured only from `server/.env`. Database
+  credentials never go in the frontend: everything there is shipped to the browser.
+- `db/schema.sql` - the 22-table schema, from the original Luck-Cays MySQL design.
+- `GET /api/health` - reports whether the database is reachable.
+- `GET /api/poker/tables` and `GET /api/poker/tables/:tableId` - read active table
+  summaries and empty/current seat snapshots. Seed the database to create the starter tables.
+- Socket.IO is attached at `/socket.io`. Poker mutation events are deliberately rejected until
+  backend authentication and authoritative game logic are implemented; this initial wiring
+  does not move wallet chips.
+- `GET /api/vip/tiers` - the VIP ladder (public).
+- `src/wallet.ts` - the only code that changes balances: locks the wallet row, updates the
+  balance and appends a ledger entry, with an idempotency key so nothing is paid twice.
+- `src/jobs/lossback.ts` - daily VIP lossback. Every day at 2pm Bahamas time each player gets
+  their tier's rate (1.5% Grunt ... 12% Shark) of what they wagered minus what they won on
+  slots and sports since the last payout. Runs inside the server, checking every minute.
+  Time, timezone and games are in the `config_values` table.
+
+Other commands (from `server/`):
+
+```bash
+npm run db:sql -- db/seed.sql   # run any SQL file (seed.sql: VIP tiers + settings; re-runnable)
+npm run job:lossback            # pay any lossback that is due, right now (safe to repeat)
+npm run test:lossback           # payout-time maths + an end-to-end payout on a temporary player
+```
+
+`server/.env` and `*.pem` are gitignored. Never commit them.

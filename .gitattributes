@@ -1,0 +1,24 @@
+# Normalise line endings to LF everywhere, in the repository AND in the working tree.
+#
+# Without `eol=lf`, Git on Windows checks files out as CRLF, and then `prettier --check`
+# fails on a fresh clone because .prettierrc.json asks for LF. CI runs on Linux, so the two
+# would disagree about a repository nobody had touched.
+* text=auto eol=lf
+
+# Binary: never translate, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
+*.db binary
+
+# Generated. Collapse them in diffs and exclude them from language statistics, but keep
+# them diffable when someone does want to look.
+package-lock.json linguist-generated=true -diff
+src/shared/slots/configs/*.ts linguist-generated=true

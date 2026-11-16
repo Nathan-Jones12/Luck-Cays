@@ -2,3 +2,13 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+# Database CA certificate (downloaded from Aiven)
+*.pem
